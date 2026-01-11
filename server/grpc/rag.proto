@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package silverbullet_rag;
+
+// RAG service for fast hooks integration
+service RAGService {
+  // Query the knowledge graph
+  rpc Query(QueryRequest) returns (QueryResponse);
+
+  // Search by keyword
+  rpc Search(SearchRequest) returns (SearchResponse);
+
+  // Semantic search using vector embeddings
+  rpc SemanticSearch(SemanticSearchRequest) returns (SemanticSearchResponse);
+
+  // Hybrid search combining keyword and semantic search
+  rpc HybridSearch(HybridSearchRequest) returns (HybridSearchResponse);
+
+  // Update/reindex a page
+  rpc UpdatePage(UpdatePageRequest) returns (UpdatePageResponse);
+}
+
+message QueryRequest {
+  string cypher_query = 1;
+}
+
+message QueryResponse {
+  string results_json = 1;
+  bool success = 2;
+  string error = 3;
+}
+
+message SearchRequest {
+  string keyword = 1;
+}
+
+message SearchResponse {
+  string results_json = 1;
+  bool success = 2;
+  string error = 3;
+}
+
+message SemanticSearchRequest {
+  string query = 1;
+  int32 limit = 2;
+  repeated string filter_tags = 3;
+  repeated string filter_pages = 4;
+}
+
+message SemanticSearchResponse {
+  string results_json = 1;
+  bool success = 2;
+  string error = 3;
+}
+
+message HybridSearchRequest {
+  string query = 1;
+  int32 limit = 2;
+  repeated string filter_tags = 3;
+  repeated string filter_pages = 4;
+  string fusion_method = 5;  // "rrf" or "weighted"
+  float semantic_weight = 6;
+  float keyword_weight = 7;
+}
+
+message HybridSearchResponse {
+  string results_json = 1;
+  bool success = 2;
+  string error = 3;
+}
+
+message UpdatePageRequest {
+  string page_name = 1;
+  string content = 2;
+}
+
+message UpdatePageResponse {
+  bool success = 1;
+  string error = 2;
+}

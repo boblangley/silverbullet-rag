@@ -2,17 +2,83 @@
   "name": "SilverBullet RAG Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:noble",
   "features": {
-    "ghcr.io/devcontainers/features/rust:1": {},
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11",
+      "installTools": true
+    },
+    "ghcr.io/devcontainers/features/node:1": {},
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
   },
+  "mounts": [
+    {
+        "source": "/var/run/docker.sock",
+        "target": "/var/run/docker.sock",
+        "type": "bind"
+    },
+    {
+        "source": "claude",
+        "target": "/home/vscode/.claude",
+        "type": "volume"
+    },
+    {
+        "source": "gemini",
+        "target": "/home/vscode/.gemini",
+        "type": "volume"
+    }
+  ],
   "customizations": {
     "vscode": {
       "extensions": [
+        // Python development
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "ms-python.mypy-type-checker",
+
+        // Docker and containers
+        "ms-azuretools.vscode-docker",
+
+        // Data and formats
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml",
+
+        // Markdown and documentation
+        "yzhang.markdown-all-in-one",
+        "bierner.markdown-mermaid",
+
+        // Protocol Buffers (gRPC)
+        "zxh404.vscode-proto3",
+
+        // General productivity
         "Gruntfuggly.todo-tree",
-        "ms-azuretools.vscode-containers",
+        "eamodio.gitlens",
+
+        // AI assistants
         "anthropic.claude-code",
         "google.geminicodeassist"
-      ]
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": false,
+        "python.linting.mypyEnabled": true,
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": "explicit"
+        },
+        "[python]": {
+          "editor.formatOnSave": true,
+          "editor.rulers": [88]
+        },
+        "files.exclude": {
+          "**/__pycache__": true,
+          "**/*.pyc": true,
+          "**/.pytest_cache": true,
+          "**/.mypy_cache": true
+        }
+      }
     }
-  }
+  },
+  "postCreateCommand": "pip install poetry && poetry install"
 }

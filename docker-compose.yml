@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # MCP HTTP Server (primary service)
+  mcp-server:
+    # Use pre-built image from GHCR (comment out 'build' and uncomment 'image' to use)
+    # image: ghcr.io/YOUR_USERNAME/silverbullet-rag:latest
+    build: .
+    container_name: silverbullet-rag-mcp
+    volumes:
+      # Mount the Silverbullet space (same as Silverbullet container)
+      - silverbullet-space:/space:ro
+      # Mount database directory
+      - ladybug-db:/data
+    ports:
+      # MCP Streamable HTTP transport
+      - "8000:8000"
+    environment:
+      - DB_PATH=/data/ladybug
+      - SPACE_PATH=/space
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
+    restart: unless-stopped
+    command: python -m server.mcp_http_server
+
+  # gRPC server for hooks
+  grpc-server:
+    # image: ghcr.io/YOUR_USERNAME/silverbullet-rag:latest
+    build: .
+    container_name: silverbullet-rag-grpc
+    volumes:
+      - silverbullet-space:/space:ro
+      - ladybug-db:/data
+    ports:
+      - "50051:50051"
+    environment:
+      - DB_PATH=/data/ladybug
+      - SPACE_PATH=/space
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
+    restart: unless-stopped
+    command: python -m server.grpc_server
+
+  # File watcher service
+  watcher:
+    # image: ghcr.io/YOUR_USERNAME/silverbullet-rag:latest
+    build: .
+    container_name: silverbullet-rag-watcher
+    volumes:
+      - silverbullet-space:/space:ro
+      - ladybug-db:/data
+    environment:
+      - DB_PATH=/data/ladybug
+      - SPACE_PATH=/space
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
+    restart: unless-stopped
+    command: python -m server.watcher
+
+volumes:
+  silverbullet-space:
+    external: true  # Should match your Silverbullet volume
+  ladybug-db:
