@@ -17,6 +17,7 @@ A production-ready RAG (Retrieval-Augmented Generation) system for Silverbullet 
 - **File Watcher**: Automatically reindexes when files change
 - **Open WebUI Pipe**: RAG integration for Open WebUI
 - **Markdown Parsing**: Chunks documents by headings, extracts wikilinks and tags
+- **Silverbullet v2 Support**: Transclusion expansion, inline attributes, data blocks
 - **Content Cleaning**: Removes Silverbullet syntax noise before embedding
 
 ## Quick Start
@@ -267,15 +268,17 @@ server/
 └── pipe/
     └── openwebui_pipe.py # Open WebUI integration
 
-tests/                   # 67 tests using TDD approach
+tests/                   # 119+ tests using TDD approach
 ├── conftest.py          # Test fixtures with OpenAI mocking
-├── test_grpc_server.py  # gRPC functionality (6 tests)
-├── test_graph_deletion.py # Deletion & cleanup (9 tests)
-├── test_security.py     # Security protection (12 tests)
-├── test_embeddings.py   # Embedding service (18 tests)
-├── test_semantic_search.py # Vector search (13 tests)
+├── test_v2_features.py  # Silverbullet v2: transclusions, attributes, data blocks (22 tests)
+├── test_grpc_server.py  # gRPC functionality
+├── test_graph_deletion.py # Deletion & cleanup
+├── test_security.py     # Security protection
+├── test_embeddings.py   # Embedding service
+├── test_semantic_search.py # Vector search
 ├── test_hybrid_search.py   # Hybrid search
-└── test_mcp_http.py     # MCP HTTP transport (9 tests)
+├── test_bm25_ranking.py    # BM25 keyword search
+└── test_mcp_http.py     # MCP HTTP transport
 ```
 
 ### Architecture
@@ -327,6 +330,168 @@ tests/                   # 67 tests using TDD approach
           └────────┘ └────────┘ └────────┘
 ```
 
+## Graph Schema
+
+The knowledge graph captures relationships between pages, chunks, tags, folders, attributes, and data blocks.
+
+### Node Types
+
+| Node | Properties | Description |
+|------|-----------|-------------|
+| **Chunk** | `id`, `file_path`, `header`, `content`, `frontmatter`, `embedding` | Content segments split by `##` headings |
+| **Page** | `name` | Silverbullet page (may not exist yet - "aspiring pages") |
+| **Tag** | `name` | Tags from `#hashtags` or frontmatter `tags:` |
+| **Folder** | `path`, `name`, `has_index_page` | Directory structure |
+| **Attribute** | `id`, `name`, `value` | Inline attributes `[name: value]` |
+| **DataBlock** | `id`, `tag`, `data`, `file_path` | YAML data blocks ` ```#tagname ` |
+
+### Relationships
+
+| Relationship | From → To | Properties | Description |
+|-------------|-----------|------------|-------------|
+| `LINKS_TO` | Chunk → Page | - | Wikilinks `[[page]]` |
+| `EMBEDS` | Chunk → Page | `header` | Transclusions `![[page]]` or `![[page#section]]` |
+| `TAGGED` | Chunk → Tag | - | Hashtags and frontmatter tags |
+| `IN_FOLDER` | Chunk → Folder | - | Chunk location in folder hierarchy |
+| `CONTAINS` | Folder → Folder | - | Parent-child folder relationships |
+| `HAS_ATTRIBUTE` | Chunk → Attribute | - | Inline attribute associations |
+| `HAS_DATA_BLOCK` | Chunk → DataBlock | - | Data block associations |
+| `DATA_TAGGED` | DataBlock → Tag | - | Data block tag (from ` ```#tagname `) |
+
+### Example Cypher Queries
+
+```cypher
+-- Find all pages that embed (transclude) a specific page
+MATCH (c:Chunk)-[:EMBEDS]->(p:Page {name: "SharedComponent"})
+RETURN c.file_path, c.header
+
+-- Find chunks with specific inline attributes
+MATCH (c:Chunk)-[:HAS_ATTRIBUTE]->(a:Attribute {name: "status"})
+WHERE a.value = "done"
+RETURN c.file_path, c.content
+
+-- Find all data blocks of a specific type
+MATCH (d:DataBlock {tag: "person"})
+RETURN d.data, d.file_path
+
+-- Find pages sharing the same tag
+MATCH (c1:Chunk)-[:TAGGED]->(t:Tag)<-[:TAGGED]-(c2:Chunk)
+WHERE c1 <> c2
+RETURN DISTINCT c1.file_path, c2.file_path, t.name
+```
+
+## Silverbullet v2 Features
+
+The parser supports key Silverbullet v2 constructs:
+
+### Transclusions
+
+Embed content from other pages:
+
+```markdown
+![[OtherPage]]           <!-- Embeds entire page -->
+![[OtherPage#Section]]   <!-- Embeds specific section -->
+```
+
+Transclusions are:
+- **Expanded** at parse time (content inlined for search/embeddings)
+- **Tracked** as `EMBEDS` relationships in the graph
+- **Protected** against circular references (max depth: 5)
+
+### Inline Attributes
+
+Add metadata to any content:
+
+```markdown
+- Task item [status: done] [priority: high]
+- Meeting notes [date: 2024-01-15] [attendees: Alice, Bob]
+```
+
+Attributes are:
+- Extracted and stored as `Attribute` nodes
+- Queryable via Cypher for structured data retrieval
+- Not confused with markdown links `[text](url)`
+
+### Data Blocks
+
+Define structured data with tagged YAML blocks:
+
+~~~markdown
+```#person
+name: John Doe
+email: john@example.com
+role: Developer
+```
+~~~
+
+Data blocks are:
+- Parsed as YAML and stored in `DataBlock` nodes
+- Tagged for easy querying (`DATA_TAGGED` relationship)
+- Ideal for contact lists, project metadata, configurations
+
+### Content Not Captured
+
+Some Silverbullet v2 features generate content dynamically at render time and are **not** captured:
+
+- **Space-Lua expressions**: `${expression}` - computed values
+- **Query results**: `${query[[...]]}` - dynamic tables
+- **Templates**: `template.each()` - generated content
+- **Widgets**: `${widget.new{...}}` - rendered UI elements
+
+These are intentionally excluded because:
+1. They aggregate/display existing data (which we index at the source)
+2. Evaluating Space-Lua would require a full interpreter
+3. The underlying data is already in the graph
+
+## Search Capabilities
+
+### BM25 Keyword Search
+
+Professional-grade keyword search with:
+- **Tag boosting**: 2x weight for matches in tags
+- **Technical term detection**: 1.5x weight for terms like `api`, `database`, `query`
+- **Header boosting**: 2x weight for matches in headings
+- **Multi-term queries**: Searches for any term, ranks by combined score
+
+```python
+results = db.keyword_search("database optimization")
+# Returns [{col0: chunk_data, bm25_score: 2.45}, ...]
+```
+
+### Semantic Search
+
+AI-powered search using OpenAI embeddings:
+- **Model**: `text-embedding-3-small` (1536 dimensions)
+- **Index**: HNSW with cosine similarity
+- **Content cleaning**: Removes Silverbullet syntax before embedding
+
+```python
+results = db.semantic_search(
+    query="How do I configure authentication?",
+    limit=10,
+    filter_tags=["config"]
+)
+```
+
+### Hybrid Search
+
+Combines keyword and semantic search for best results:
+- **RRF (Reciprocal Rank Fusion)**: Merges rankings without score normalization
+- **Weighted fusion**: Configurable keyword/semantic weights
+- **Deduplication**: Same chunk from both methods appears once
+
+```python
+from server.search import HybridSearch
+
+hybrid = HybridSearch(db)
+results = hybrid.search(
+    query="database optimization",
+    fusion_method="rrf",  # or "weighted"
+    semantic_weight=0.7,
+    keyword_weight=0.3
+)
+```
+
 ## Testing
 
 All core functionality is tested using TDD (Test-Driven Development):
@@ -345,10 +510,9 @@ poetry run pytest tests/test_security.py -v          # Security
 ```
 
 **Test Results**:
-- **58 tests passing** (Sprint 2 added 31 tests)
-- 5 tests skipped (integration tests requiring OpenAI API/LadybugDB)
-- **90%+ coverage** for new features (embeddings, semantic search, BM25, hybrid search)
-- Core modules: 90-95% coverage
+- **119+ tests** covering all features
+- Comprehensive coverage for: parsing, graph operations, search (BM25, semantic, hybrid)
+- Silverbullet v2 features: 22 tests for transclusions, attributes, data blocks
 - Comprehensive mocking for OpenAI API (fast, no API calls in tests)
 
 ## Security
@@ -356,42 +520,3 @@ poetry run pytest tests/test_security.py -v          # Security
 ✅ **Cypher Injection Protection**: All queries use parameterized statements
 ✅ **Path Traversal Protection**: File operations validate paths
 ✅ **Input Validation**: Handles edge cases, unicode, special characters
-
-## Usage Examples
-
-### Semantic Search
-```python
-from server.db import GraphDB
-
-db = GraphDB("/db", enable_embeddings=True)
-
-# Natural language search
-results = db.semantic_search(
-    query="How do I configure the database?",
-    limit=10,
-    filter_tags=["configuration", "setup"]
-)
-```
-
-### Hybrid Search (Best Results)
-```python
-from server.search import HybridSearch
-from server.db import GraphDB
-
-db = GraphDB("/db")
-hybrid = HybridSearch(db)
-
-# Combines keyword + semantic with RRF fusion
-results = hybrid.search(
-    query="database optimization",
-    limit=10,
-    fusion_method="rrf"  # or "weighted"
-)
-```
-
-### BM25 Keyword Search
-```python
-# Professional-grade keyword search with tag boosting
-results = db.keyword_search("database performance")
-# Returns results sorted by BM25 score
-```

@@ -3,7 +3,7 @@
 import json
 from typing import List, Dict, Any, Optional
 import real_ladybug as lb
-from ..parser import Chunk
+from ..parser import Chunk, Transclusion, InlineAttribute, DataBlock
 from ..embeddings import EmbeddingService
 import logging
 
@@ -68,11 +68,36 @@ class GraphDB:
                     PRIMARY KEY(path)
                 )
             """)
+            # Attribute node for inline attributes [name: value]
+            conn.execute("""
+                CREATE NODE TABLE IF NOT EXISTS Attribute(
+                    id STRING,
+                    name STRING,
+                    value STRING,
+                    PRIMARY KEY(id)
+                )
+            """)
+            # DataBlock node for ```#tagname YAML blocks
+            conn.execute("""
+                CREATE NODE TABLE IF NOT EXISTS DataBlock(
+                    id STRING,
+                    tag STRING,
+                    data STRING,
+                    file_path STRING,
+                    PRIMARY KEY(id)
+                )
+            """)
+            # Relationships
             conn.execute("CREATE REL TABLE IF NOT EXISTS LINKS_TO(FROM Chunk TO Page)")
             conn.execute("CREATE REL TABLE IF NOT EXISTS TAGGED(FROM Chunk TO Tag)")
             conn.execute("CREATE REL TABLE IF NOT EXISTS CONTAINS(FROM Folder TO Folder)")
             conn.execute("CREATE REL TABLE IF NOT EXISTS FOLDER_CONTAINS_PAGE(FROM Folder TO Page)")
             conn.execute("CREATE REL TABLE IF NOT EXISTS IN_FOLDER(FROM Chunk TO Folder)")
+            # New relationships for transclusions, attributes, and data blocks
+            conn.execute("CREATE REL TABLE IF NOT EXISTS EMBEDS(FROM Chunk TO Page, header STRING)")
+            conn.execute("CREATE REL TABLE IF NOT EXISTS HAS_ATTRIBUTE(FROM Chunk TO Attribute)")
+            conn.execute("CREATE REL TABLE IF NOT EXISTS HAS_DATA_BLOCK(FROM Chunk TO DataBlock)")
+            conn.execute("CREATE REL TABLE IF NOT EXISTS DATA_TAGGED(FROM DataBlock TO Tag)")
 
             # Create vector index for semantic search if embeddings are enabled
             if self.enable_embeddings:
@@ -194,6 +219,66 @@ class GraphDB:
                     "folder_path": chunk.folder_path
                 })
 
+            # Create edges for transclusions (EMBEDS relationship)
+            if hasattr(chunk, 'transclusions') and chunk.transclusions:
+                for transclusion in chunk.transclusions:
+                    embed_query = """
+                    MATCH (c:Chunk {id: $chunk_id})
+                    MERGE (p:Page {name: $target_page})
+                    MERGE (c)-[:EMBEDS {header: $header}]->(p)
+                    """
+                    conn.execute(embed_query, {
+                        "chunk_id": chunk_id,
+                        "target_page": transclusion.target_page,
+                        "header": transclusion.target_header or ""
+                    })
+
+            # Create nodes and edges for inline attributes
+            if hasattr(chunk, 'inline_attributes') and chunk.inline_attributes:
+                for attr in chunk.inline_attributes:
+                    attr_id = f"{chunk_id}#{attr.name}"
+                    attr_query = """
+                    MATCH (c:Chunk {id: $chunk_id})
+                    MERGE (a:Attribute {id: $attr_id})
+                    SET a.name = $name, a.value = $value
+                    MERGE (c)-[:HAS_ATTRIBUTE]->(a)
+                    """
+                    conn.execute(attr_query, {
+                        "chunk_id": chunk_id,
+                        "attr_id": attr_id,
+                        "name": attr.name,
+                        "value": attr.value
+                    })
+
+            # Create nodes and edges for data blocks
+            if hasattr(chunk, 'data_blocks') and chunk.data_blocks:
+                for idx, data_block in enumerate(chunk.data_blocks):
+                    block_id = f"{chunk_id}#datablock#{idx}"
+                    data_json = json.dumps(data_block.data)
+                    block_query = """
+                    MATCH (c:Chunk {id: $chunk_id})
+                    MERGE (d:DataBlock {id: $block_id})
+                    SET d.tag = $tag, d.data = $data, d.file_path = $file_path
+                    MERGE (c)-[:HAS_DATA_BLOCK]->(d)
+                    """
+                    conn.execute(block_query, {
+                        "chunk_id": chunk_id,
+                        "block_id": block_id,
+                        "tag": data_block.tag,
+                        "data": data_json,
+                        "file_path": data_block.file_path
+                    })
+                    # Also create tag relationship for the data block
+                    data_tag_query = """
+                    MATCH (d:DataBlock {id: $block_id})
+                    MERGE (t:Tag {name: $tag_name})
+                    MERGE (d)-[:DATA_TAGGED]->(t)
+                    """
+                    conn.execute(data_tag_query, {
+                        "block_id": block_id,
+                        "tag_name": data_block.tag
+                    })
+
     def index_folders(self, folder_paths: List[str], index_pages: Optional[Dict[str, str]] = None) -> None:
         """Create folder nodes and hierarchy relationships.
 
@@ -280,7 +365,7 @@ class GraphDB:
 
         # Delete all nodes and relationships
         # Order matters: delete relationships first via DETACH DELETE
-        tables = ["Chunk", "Page", "Tag", "Folder"]
+        tables = ["Chunk", "Page", "Tag", "Folder", "Attribute", "DataBlock"]
         for table in tables:
             try:
                 conn.execute(f"MATCH (n:{table}) DETACH DELETE n")
@@ -305,21 +390,37 @@ class GraphDB:
         """
         conn.execute(delete_query, {"file_path": file_path})
 
-        # Cleanup orphaned Tag nodes (tags with no incoming TAGGED relationships)
+        # Cleanup orphaned Tag nodes (tags with no incoming TAGGED or DATA_TAGGED relationships)
         cleanup_tags_query = """
         MATCH (t:Tag)
-        WHERE NOT (t)<-[:TAGGED]-()
+        WHERE NOT (t)<-[:TAGGED]-() AND NOT (t)<-[:DATA_TAGGED]-()
         DETACH DELETE t
         """
         conn.execute(cleanup_tags_query)
 
-        # Cleanup orphaned Page nodes (pages with no incoming LINKS_TO relationships)
+        # Cleanup orphaned Page nodes (pages with no incoming LINKS_TO or EMBEDS relationships)
         cleanup_pages_query = """
         MATCH (p:Page)
-        WHERE NOT (p)<-[:LINKS_TO]-()
+        WHERE NOT (p)<-[:LINKS_TO]-() AND NOT (p)<-[:EMBEDS]-()
         DETACH DELETE p
         """
         conn.execute(cleanup_pages_query)
+
+        # Cleanup orphaned Attribute nodes
+        cleanup_attrs_query = """
+        MATCH (a:Attribute)
+        WHERE NOT (a)<-[:HAS_ATTRIBUTE]-()
+        DETACH DELETE a
+        """
+        conn.execute(cleanup_attrs_query)
+
+        # Cleanup orphaned DataBlock nodes
+        cleanup_data_query = """
+        MATCH (d:DataBlock)
+        WHERE NOT (d)<-[:HAS_DATA_BLOCK]-()
+        DETACH DELETE d
+        """
+        conn.execute(cleanup_data_query)
 
     def keyword_search(self, keyword: str, scope: Optional[str] = None) -> List[Dict[str, Any]]:
         """Search for chunks by keyword with BM25 ranking.
