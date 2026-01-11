@@ -110,24 +110,26 @@ class TestCypherInjection:
         assert "params" in source or '{"' in source, "Method should use parameter dict"
 
     def test_keyword_search_comment_injection(self, graph_db_with_data):
-        """RED: Test protection against comment-based injection.
+        """Test protection against comment-based injection.
 
-        This should FAIL if comments can bypass query logic.
+        Comment characters should be treated as literal text, not as query comments.
         """
         # Attempt to use comments to bypass conditions
+        # Using 'xyznotfound' as a term that won't match anything in the test data
         malicious_inputs = [
-            "test --",
-            "test /*",
-            "test */",
-            "test //",
+            "xyznotfound --",
+            "xyznotfound /*",
+            "xyznotfound */",
+            "xyznotfound //",
         ]
 
         for search_term in malicious_inputs:
             results = graph_db_with_data.keyword_search(search_term)
             # Should search for the literal string, not execute as comment
             assert isinstance(results, list)
-            # Should return 0 or minimal results (searching for literal comment chars)
-            assert len(results) <= 1
+            # Should return 0 results since 'xyznotfound' doesn't exist in test data
+            # and comment chars are treated as literals, not query syntax
+            assert len(results) == 0, f"Expected 0 results for '{search_term}', got {len(results)}"
 
     def test_cypher_query_method_with_injection(self, graph_db_with_data):
         """Test that direct cypher_query method is safe with parameters.
