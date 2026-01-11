@@ -14,6 +14,9 @@ watchdog>=4.0.0
 # Markdown parsing
 markdown-it-py>=3.0.0
 
+# YAML frontmatter parsing
+pyyaml>=6.0
+
 # Data validation
 pydantic>=2.5.0
 
