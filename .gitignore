@@ -20,4 +20,19 @@ target
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-space/\n# Generated proto files\nserver/grpc/*_pb2.py\nserver/grpc/*_pb2_grpc.py\nserver/grpc/*_pb2.pyi
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+*.egg
+.pytest_cache/
+.mypy_cache/
+
+# Generated proto files
+server/grpc/*_pb2.py
+server/grpc/*_pb2_grpc.py
+server/grpc/*_pb2.pyi

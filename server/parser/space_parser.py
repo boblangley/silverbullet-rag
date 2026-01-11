@@ -174,14 +174,29 @@ class SpaceParser:
             frontmatter = {}
 
         links = self.link_pattern.findall(content)
-        tags = self.tag_pattern.findall(content)
+
+        # Collect tags from both #hashtags in content and frontmatter tags property
+        content_tags = self.tag_pattern.findall(content)
+        frontmatter_tags = frontmatter.get('tags', [])
+
+        # Normalize frontmatter tags (could be a single string or list)
+        if isinstance(frontmatter_tags, str):
+            frontmatter_tags = [frontmatter_tags]
+        elif not isinstance(frontmatter_tags, list):
+            frontmatter_tags = []
+
+        # Combine and deduplicate tags (preserve order, content tags first)
+        all_tags = list(content_tags)
+        for tag in frontmatter_tags:
+            if tag and tag not in all_tags:
+                all_tags.append(tag)
 
         return Chunk(
             file_path=file_path,
             header=header,
             content=content,
             links=links,
-            tags=tags,
+            tags=all_tags,
             folder_path=folder_path,
             frontmatter=frontmatter
         )

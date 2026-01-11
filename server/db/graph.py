@@ -1,5 +1,6 @@
 """Graph database operations using LadybugDB."""
 
+import json
 from typing import List, Dict, Any, Optional
 import real_ladybug as lb
 from ..parser import Chunk
@@ -32,6 +33,7 @@ class GraphDB:
         # LadybugDB requires node tables to be created before use
         try:
             # Create Chunk table with embedding field (FLOAT[] for vector storage)
+            # frontmatter is stored as JSON string for flexible schema
             if self.enable_embeddings:
                 conn.execute("""
                     CREATE NODE TABLE IF NOT EXISTS Chunk(
@@ -39,6 +41,7 @@ class GraphDB:
                         file_path STRING,
                         header STRING,
                         content STRING,
+                        frontmatter STRING,
                         embedding FLOAT[],
                         PRIMARY KEY(id)
                     )
@@ -50,6 +53,7 @@ class GraphDB:
                         file_path STRING,
                         header STRING,
                         content STRING,
+                        frontmatter STRING,
                         PRIMARY KEY(id)
                     )
                 """)
@@ -115,6 +119,9 @@ class GraphDB:
             # Create chunk node
             chunk_id = f"{chunk.file_path}#{chunk.header}"
 
+            # Serialize frontmatter to JSON string
+            frontmatter_json = json.dumps(chunk.frontmatter) if chunk.frontmatter else "{}"
+
             # Build query based on whether embeddings are enabled
             if self.enable_embeddings and embeddings:
                 query = """
@@ -122,6 +129,7 @@ class GraphDB:
                 SET c.file_path = $file_path,
                     c.header = $header,
                     c.content = $content,
+                    c.frontmatter = $frontmatter,
                     c.embedding = $embedding
                 """
                 params = {
@@ -129,6 +137,7 @@ class GraphDB:
                     "file_path": chunk.file_path,
                     "header": chunk.header,
                     "content": chunk.content,
+                    "frontmatter": frontmatter_json,
                     "embedding": embeddings[i]
                 }
             else:
@@ -136,13 +145,15 @@ class GraphDB:
                 MERGE (c:Chunk {id: $id})
                 SET c.file_path = $file_path,
                     c.header = $header,
-                    c.content = $content
+                    c.content = $content,
+                    c.frontmatter = $frontmatter
                 """
                 params = {
                     "id": chunk_id,
                     "file_path": chunk.file_path,
                     "header": chunk.header,
-                    "content": chunk.content
+                    "content": chunk.content,
+                    "frontmatter": frontmatter_json
                 }
 
             conn.execute(query, params)

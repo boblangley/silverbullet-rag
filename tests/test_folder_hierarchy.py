@@ -297,6 +297,74 @@ Body content.
         assert "---" not in chunk.content
         assert "github:" not in chunk.content
 
+    def test_frontmatter_tags_merged_into_chunk_tags(self, temp_space_path):
+        """Frontmatter tags should be merged with content hashtags."""
+        from server.parser.space_parser import SpaceParser
+
+        content = """---
+tags:
+  - project
+  - active
+---
+# Title
+
+Body content with #hashtag and #another.
+"""
+        Path(temp_space_path, "test.md").write_text(content)
+
+        parser = SpaceParser()
+        chunks = parser.parse_space(temp_space_path)
+
+        assert len(chunks) > 0
+        chunk = chunks[0]
+        # Should have both content hashtags and frontmatter tags
+        assert "hashtag" in chunk.tags
+        assert "another" in chunk.tags
+        assert "project" in chunk.tags
+        assert "active" in chunk.tags
+
+    def test_frontmatter_tags_single_string(self, temp_space_path):
+        """Frontmatter tags can be a single string instead of list."""
+        from server.parser.space_parser import SpaceParser
+
+        content = """---
+tags: solo-tag
+---
+# Title
+
+Body content.
+"""
+        Path(temp_space_path, "test.md").write_text(content)
+
+        parser = SpaceParser()
+        chunks = parser.parse_space(temp_space_path)
+
+        assert len(chunks) > 0
+        chunk = chunks[0]
+        assert "solo-tag" in chunk.tags
+
+    def test_frontmatter_tags_deduplicated(self, temp_space_path):
+        """Duplicate tags from content and frontmatter should be deduplicated."""
+        from server.parser.space_parser import SpaceParser
+
+        content = """---
+tags:
+  - duplicate
+---
+# Title
+
+Body with #duplicate tag.
+"""
+        Path(temp_space_path, "test.md").write_text(content)
+
+        parser = SpaceParser()
+        chunks = parser.parse_space(temp_space_path)
+
+        assert len(chunks) > 0
+        chunk = chunks[0]
+        # Should only appear once
+        assert chunk.tags.count("duplicate") == 1
+
 
 class TestGetProjectContextTool:
     """Test the get_project_context MCP tool."""
