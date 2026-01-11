@@ -21,7 +21,7 @@ A production-ready RAG (Retrieval-Augmented Generation) system for Silverbullet 
 
 ## Quick Start
 
-Initialize your RAG
+Initialize your RAG index:
 
 ```bash
 docker run --rm \
@@ -34,6 +34,28 @@ docker run --rm \
   silverbullet-rag \
   python -m server.init_index
 ```
+
+### Rebuilding the Index
+
+To completely rebuild the database (useful after schema changes or to clear stale data):
+
+```bash
+docker run --rm \
+  -v silverbullet-space:/space:ro \
+  -v ladybug-db:/data \
+  -e DB_PATH=/data/ladybug \
+  -e SPACE_PATH=/space \
+  -e OPENAI_API_KEY=${OPENAI_API_KEY} \
+  -e ENABLE_EMBEDDINGS=true \
+  silverbullet-rag \
+  python -m server.init_index --rebuild
+```
+
+**CLI Options:**
+- `--rebuild` - Clear the database and rebuild from scratch
+- `--space-path PATH` - Override the space path
+- `--db-path PATH` - Override the database path
+- `--no-embeddings` - Disable embedding generation (keyword search only)
 
 ### Option 1: Using Pre-built Image from GitHub Container Registry
 

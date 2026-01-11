@@ -269,6 +269,27 @@ class GraphDB:
 
         return records
 
+    def clear_database(self) -> None:
+        """Clear all data from the database.
+
+        Deletes all nodes and relationships, then recreates the schema.
+        Use this for a clean rebuild of the index.
+        """
+        conn = lb.Connection(self.db)
+        logger.info("Clearing database...")
+
+        # Delete all nodes and relationships
+        # Order matters: delete relationships first via DETACH DELETE
+        tables = ["Chunk", "Page", "Tag", "Folder"]
+        for table in tables:
+            try:
+                conn.execute(f"MATCH (n:{table}) DETACH DELETE n")
+                logger.info(f"Cleared {table} nodes")
+            except Exception as e:
+                logger.debug(f"Error clearing {table}: {e}")
+
+        logger.info("Database cleared")
+
     def delete_chunks_by_file(self, file_path: str) -> None:
         """Delete all chunks associated with a file and cleanup orphaned nodes.
 
