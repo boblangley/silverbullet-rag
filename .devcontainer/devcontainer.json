@@ -1,0 +1,18 @@
+{
+  "name": "SilverBullet RAG Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/base:noble",
+  "features": {
+    "ghcr.io/devcontainers/features/rust:1": {},
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Gruntfuggly.todo-tree",
+        "ms-azuretools.vscode-containers",
+        "anthropic.claude-code",
+        "google.geminicodeassist"
+      ]
+    }
+  }
+}
