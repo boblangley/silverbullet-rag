@@ -1,68 +1,13 @@
 # Silverbullet RAG
 
-> RAG system for Silverbullet using LadybugDB graph database and Model Context Protocol
-
-## Status: Sprint 2 Complete ✅ | Production Ready 🚀
-
-**Last Updated**: 2026-01-11
-
 A production-ready RAG (Retrieval-Augmented Generation) system for Silverbullet that uses LadybugDB for graph-based knowledge storage, OpenAI embeddings for semantic search, and Model Context Protocol (MCP) for AI assistant integration.
-
-### What's Working Now
-
-**Core Infrastructure (Sprint 1)** ✅:
-- ✅ Graph database (LadybugDB) with wikilinks and tags
-- ✅ Keyword search with BM25 ranking
-- ✅ File watcher with automatic reindexing and deletion handling
-- ✅ gRPC server for fast hook access
-- ✅ Docker containerization
-- ✅ Security hardened (injection protection, path validation)
-
-**MCP HTTP Transport (Sprint 2)** ✅:
-- ✅ FastMCP with Streamable HTTP transport
-- ✅ Production-ready HTTP server on port 8000
-- ✅ Remote access from any MCP client (Claude Desktop, etc.)
-- ✅ All 7 tools available via HTTP
-- ✅ Path traversal protection
-- ✅ Error handling and logging
-
-**Folder Hierarchy & Project Context (Sprint 5)** ✅:
-- ✅ Folder nodes in graph with `CONTAINS` relationships
-- ✅ YAML frontmatter parsing (github, tags, concerns)
-- ✅ `get_project_context` tool for automatic context injection
-- ✅ `scope` parameter on all search tools
-- ✅ Silverbullet folder convention support (Folder.md as sibling index)
-
-**Semantic Search (Sprint 3)** ✅:
-- ✅ OpenAI embedding generation (text-embedding-3-small)
-- ✅ HNSW vector indexing with cosine similarity
-- ✅ Semantic search with tag/page filtering
-- ✅ Silverbullet syntax cleaning (wikilinks, tags, mentions)
-- ✅ Batch embedding generation for performance
-- ✅ `semantic_search` tool in MCP and gRPC
-
-**Search Quality (Sprint 4)** ✅:
-- ✅ BM25 ranking with tag boosting
-- ✅ Multi-term query support
-- ✅ Technical term detection and boosting
-- ✅ Hybrid search (RRF + weighted fusion)
-- ✅ `hybrid_search` tool in MCP and gRPC
-
-**Testing**:
-- ✅ 95 passing tests (22 new for folder hierarchy)
-- ✅ 90%+ coverage for new features
-- ✅ TDD approach with comprehensive mocking
-
-**Backlog**:
-- ⏸️ LLM-assisted smart chunking
-- ⏸️ DuckDB integration
 
 ## Features
 
 - **Graph-based Knowledge Storage**: Uses LadybugDB to store pages, chunks, links, tags, and folders as a graph
 - **Folder Hierarchy**: Tracks folder structure with `CONTAINS` relationships for scoped searches
 - **Project Context**: Automatic context injection via `get_project_context` tool using GitHub remotes or folder paths
-- **YAML Frontmatter Parsing**: Extracts `github`, `tags`, and `concerns` metadata from markdown files
+- **YAML Frontmatter Parsing**: Extracts `github` and `tags` metadata from markdown files
 - **Scoped Search**: Filter search results to specific folders/projects using `scope` parameter
 - **Semantic Search**: AI-powered search using OpenAI embeddings with HNSW vector indexing
 - **BM25 Keyword Search**: Professional-grade keyword search with tag boosting and technical term detection
@@ -75,6 +20,20 @@ A production-ready RAG (Retrieval-Augmented Generation) system for Silverbullet 
 - **Content Cleaning**: Removes Silverbullet syntax noise before embedding
 
 ## Quick Start
+
+Initialize your RAG
+
+```bash
+docker run --rm \
+  -v silverbullet-space:/space:ro \
+  -v ladybug-db:/data \
+  -e DB_PATH=/data/ladybug \
+  -e SPACE_PATH=/space \
+  -e OPENAI_API_KEY=${OPENAI_API_KEY} \
+  -e ENABLE_EMBEDDINGS=true \
+  silverbullet-rag \
+  python -m server.init_index
+```
 
 ### Option 1: Using Pre-built Image from GitHub Container Registry
 
@@ -140,6 +99,56 @@ docker-compose logs -f mcp-server
 
 # Check gRPC server
 grpcurl -plaintext localhost:50051 list
+```
+
+## gRPC Python Client
+
+For Python integrations (e.g., Silverbullet hooks), use the gRPC client:
+
+```python
+import grpc
+import json
+from server.grpc import rag_pb2, rag_pb2_grpc
+
+# Connect to the server
+channel = grpc.insecure_channel('localhost:50051')
+stub = rag_pb2_grpc.RAGServiceStub(channel)
+
+# Keyword search
+response = stub.Search(rag_pb2.SearchRequest(keyword="python"))
+if response.success:
+    results = json.loads(response.results_json)
+    for chunk in results:
+        print(f"Found: {chunk['col0']['file_path']}")
+
+# Semantic search
+response = stub.SemanticSearch(rag_pb2.SemanticSearchRequest(
+    query="How do I configure authentication?",
+    limit=10,
+    filter_tags=["config"]
+))
+
+# Hybrid search (best results)
+response = stub.HybridSearch(rag_pb2.HybridSearchRequest(
+    query="database optimization",
+    limit=10,
+    fusion_method="rrf",
+    semantic_weight=0.7,
+    keyword_weight=0.3
+))
+
+# Raw Cypher query
+response = stub.Query(rag_pb2.QueryRequest(
+    cypher_query="MATCH (c:Chunk)-[:TAGGED]->(t:Tag {name: 'python'}) RETURN c"
+))
+
+# Update a page (triggers reindexing)
+response = stub.UpdatePage(rag_pb2.UpdatePageRequest(
+    page_name="Notes/MyPage.md",
+    content="# My Page\n\nNew content."
+))
+
+channel.close()
 ```
 
 ## MCP Tools
@@ -364,39 +373,3 @@ results = hybrid.search(
 results = db.keyword_search("database performance")
 # Returns results sorted by BM25 score
 ```
-
-## Development Roadmap
-
-See [implementation plan](/home/vscode/.claude/plans/curious-dreaming-leaf.md) for detailed technical specifications.
-
-### ✅ Sprint 1: Core Infrastructure (Complete)
-- Graph database with secure queries
-- File watcher with deletion handling
-- gRPC server for hooks
-- Security hardening (injection protection)
-
-### ✅ Sprint 2: MCP HTTP Transport (Complete)
-- FastMCP with Streamable HTTP
-- Production HTTP server (port 8000)
-- Remote access capability
-- All 6 tools via HTTP
-
-### ✅ Sprint 3: Semantic Search (Complete)
-- OpenAI embeddings integration
-- Vector storage in LadybugDB
-- `semantic_search` tool in MCP/gRPC
-- HNSW indexing with cosine similarity
-
-### ✅ Sprint 4: Search Quality (Complete)
-- BM25 ranking for keyword search
-- Hybrid search (RRF fusion)
-- Tag/technical term weighting
-
-### Backlog (Future)
-- LLM-assisted smart chunking
-- Incremental indexing optimization
-- DuckDB integration (if needed)
-
-## License
-
-See project license file.
