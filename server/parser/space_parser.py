@@ -1,10 +1,11 @@
 """Parse Silverbullet markdown files into chunks."""
 
 import re
-import yaml
-from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import yaml
 from markdown_it import MarkdownIt
 
 
@@ -556,4 +557,5 @@ class SpaceParser:
                     relative_index = index_file.relative_to(space_path)
                     index_map[str(relative_folder)] = str(relative_index)
 
+        return index_map
         return index_map
