@@ -20,6 +20,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      HAS_OPENAI_KEY: ${{ secrets.OPENAI_API_KEY != '' }}
 
     steps:
       - name: Checkout repository
@@ -50,7 +52,7 @@ jobs:
             --tb=short
 
       - name: Run tests with OpenAI (if secret available)
-        if: ${{ secrets.OPENAI_API_KEY != '' }}
+        if: env.HAS_OPENAI_KEY == 'true'
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           RUN_OPENAI_TESTS: "true"
