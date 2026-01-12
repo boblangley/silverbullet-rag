@@ -9,9 +9,10 @@ Key concepts:
 - Silverbullet convention: Folder.md (sibling file) is the folder's index, not Folder/index.md
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 
 class TestFolderNodesInGraph:
@@ -87,8 +88,8 @@ class TestFolderNodesInGraph:
 
             # Create nested folder structure
             db.cypher_query("""
-                CREATE (root:Folder {name: 'Codex', path: 'Codex'})
-                CREATE (sub:Folder {name: 'Personal-Assistant', path: 'Codex/Personal-Assistant'})
+                CREATE (root:Folder {name: 'Projects', path: 'Projects'})
+                CREATE (sub:Folder {name: 'SubProject', path: 'Projects/SubProject'})
                 CREATE (root)-[:CONTAINS]->(sub)
             """)
 
@@ -98,9 +99,9 @@ class TestFolderNodesInGraph:
             """)
 
             assert len(result) == 1
-            assert result[0]["col0"] == "Codex"
-            assert result[0]["col1"] == "Personal-Assistant"
-            assert result[0]["col2"] == "Codex/Personal-Assistant"
+            assert result[0]["col0"] == "Projects"
+            assert result[0]["col1"] == "SubProject"
+            assert result[0]["col2"] == "Projects/SubProject"
 
     def test_index_folders_creates_hierarchy(self, temp_db_path):
         """GraphDB.index_folders() should create folder hierarchy from paths."""
@@ -111,10 +112,10 @@ class TestFolderNodesInGraph:
 
             # Index folders from a list of paths
             folder_paths = [
-                "Codex",
-                "Codex/Personal-Assistant",
-                "Codex/Personal-Assistant/Silverbullet-RAG",
-                "Realm/Health"
+                "Projects",
+                "Projects/Topic",
+                "Projects/Topic/Silverbullet-RAG",
+                "Area/Health"
             ]
 
             db.index_folders(folder_paths)
@@ -123,11 +124,11 @@ class TestFolderNodesInGraph:
             result = db.cypher_query("MATCH (f:Folder) RETURN f.path ORDER BY f.path")
             paths = [r["col0"] for r in result]
 
-            assert "Codex" in paths
-            assert "Codex/Personal-Assistant" in paths
-            assert "Codex/Personal-Assistant/Silverbullet-RAG" in paths
-            assert "Realm" in paths
-            assert "Realm/Health" in paths
+            assert "Projects" in paths
+            assert "Projects/Topic" in paths
+            assert "Projects/Topic/Silverbullet-RAG" in paths
+            assert "Area" in paths
+            assert "Area/Health" in paths
 
     def test_index_folders_creates_contains_relationships(self, temp_db_path):
         """index_folders() should create CONTAINS relationships between parent/child."""
@@ -136,16 +137,16 @@ class TestFolderNodesInGraph:
 
             db = GraphDB(temp_db_path, enable_embeddings=False)
 
-            db.index_folders(["Codex", "Codex/Personal-Assistant"])
+            db.index_folders(["Projects", "Projects/Topic"])
 
             result = db.cypher_query("""
-                MATCH (parent:Folder {name: 'Codex'})-[:CONTAINS]->(child:Folder {name: 'Personal-Assistant'})
+                MATCH (parent:Folder {name: 'Projects'})-[:CONTAINS]->(child:Folder {name: 'Topic'})
                 RETURN parent.path, child.path
             """)
 
             assert len(result) == 1
-            assert result[0]["col0"] == "Codex"
-            assert result[0]["col1"] == "Codex/Personal-Assistant"
+            assert result[0]["col0"] == "Projects"
+            assert result[0]["col1"] == "Projects/Topic"
 
 
 class TestFolderHierarchyParsing:
@@ -156,18 +157,18 @@ class TestFolderHierarchyParsing:
         from server.parser.space_parser import SpaceParser
 
         # Create nested folder structure
-        Path(temp_space_path, "Codex").mkdir()
-        Path(temp_space_path, "Codex/Project1").mkdir()
-        Path(temp_space_path, "Codex/Project1/test.md").write_text("# Test")
-        Path(temp_space_path, "Realm").mkdir()
-        Path(temp_space_path, "Realm/Health.md").write_text("# Health")
+        Path(temp_space_path, "Projects").mkdir()
+        Path(temp_space_path, "Projects/Project1").mkdir()
+        Path(temp_space_path, "Projects/Project1/test.md").write_text("# Test")
+        Path(temp_space_path, "Area").mkdir()
+        Path(temp_space_path, "Area/Health.md").write_text("# Health")
 
         parser = SpaceParser()
         folders = parser.get_folder_paths(temp_space_path)
 
-        assert "Codex" in folders
-        assert "Codex/Project1" in folders
-        assert "Realm" in folders
+        assert "Projects" in folders
+        assert "Projects/Project1" in folders
+        assert "Area" in folders
 
     def test_parser_detects_folder_index_pages(self, temp_space_path):
         """Parser should detect when Folder.md exists (sibling, not Folder/index.md)."""
@@ -190,8 +191,8 @@ class TestFolderHierarchyParsing:
         from server.parser.space_parser import SpaceParser
 
         # Create nested file
-        Path(temp_space_path, "Codex").mkdir()
-        Path(temp_space_path, "Codex/MyProject.md").write_text("# My Project\n\nContent here")
+        Path(temp_space_path, "Projects").mkdir()
+        Path(temp_space_path, "Projects/MyProject.md").write_text("# My Project\n\nContent here")
 
         parser = SpaceParser()
         chunks = parser.parse_space(temp_space_path)
@@ -200,7 +201,7 @@ class TestFolderHierarchyParsing:
         # Chunks should have folder_path attribute
         chunk = chunks[0]
         assert hasattr(chunk, 'folder_path')
-        assert chunk.folder_path == "Codex"
+        assert chunk.folder_path == "Projects"
 
 
 class TestYAMLFrontmatterParsing:
@@ -386,12 +387,12 @@ This is the project index for Claude Code development.
 
 Run `npm install` to get started.
 """
-        Path(temp_space_path, "Codex").mkdir()
-        Path(temp_space_path, "Codex/ClaudeCode.md").write_text(content)
+        Path(temp_space_path, "Projects").mkdir()
+        Path(temp_space_path, "Projects/ClaudeCode.md").write_text(content)
 
         # Initialize the space_parser global variable
-        from server.parser.space_parser import SpaceParser
         import server.mcp_http_server as mcp_module
+        from server.parser.space_parser import SpaceParser
         mcp_module.space_parser = SpaceParser()
 
         from server.mcp_http_server import get_project_context
@@ -409,9 +410,9 @@ Run `npm install` to get started.
         monkeypatch.setenv("SPACE_PATH", temp_space_path)
 
         # Create folder structure with index
-        Path(temp_space_path, "Codex").mkdir()
-        Path(temp_space_path, "Codex/MyProject").mkdir()
-        Path(temp_space_path, "Codex/MyProject.md").write_text("""---
+        Path(temp_space_path, "Projects").mkdir()
+        Path(temp_space_path, "Projects/MyProject").mkdir()
+        Path(temp_space_path, "Projects/MyProject.md").write_text("""---
 tags:
   - python
 ---
@@ -421,13 +422,13 @@ Project documentation.
 """)
 
         # Initialize the space_parser global variable
-        from server.parser.space_parser import SpaceParser
         import server.mcp_http_server as mcp_module
+        from server.parser.space_parser import SpaceParser
         mcp_module.space_parser = SpaceParser()
 
         from server.mcp_http_server import get_project_context
 
-        result = await get_project_context(folder_path="Codex/MyProject")
+        result = await get_project_context(folder_path="Projects/MyProject")
 
         assert result["success"] is True
         assert "project" in result
@@ -439,8 +440,8 @@ Project documentation.
         monkeypatch.setenv("SPACE_PATH", temp_space_path)
 
         # Initialize the space_parser global variable
-        from server.parser.space_parser import SpaceParser
         import server.mcp_http_server as mcp_module
+        from server.parser.space_parser import SpaceParser
         mcp_module.space_parser = SpaceParser()
 
         from server.mcp_http_server import get_project_context
@@ -456,21 +457,21 @@ Project documentation.
         monkeypatch.setenv("SPACE_PATH", temp_space_path)
 
         # Create project with multiple pages
-        Path(temp_space_path, "Codex").mkdir()
-        Path(temp_space_path, "Codex/Project").mkdir()
-        Path(temp_space_path, "Codex/Project.md").write_text("""---
+        Path(temp_space_path, "Projects").mkdir()
+        Path(temp_space_path, "Projects/Project").mkdir()
+        Path(temp_space_path, "Projects/Project.md").write_text("""---
 github: test/project
 ---
 # Project Index
 
 See [[Architecture]] and [[Setup]].
 """)
-        Path(temp_space_path, "Codex/Project/Architecture.md").write_text("# Architecture")
-        Path(temp_space_path, "Codex/Project/Setup.md").write_text("# Setup")
+        Path(temp_space_path, "Projects/Project/Architecture.md").write_text("# Architecture")
+        Path(temp_space_path, "Projects/Project/Setup.md").write_text("# Setup")
 
         # Initialize the space_parser global variable
-        from server.parser.space_parser import SpaceParser
         import server.mcp_http_server as mcp_module
+        from server.parser.space_parser import SpaceParser
         mcp_module.space_parser = SpaceParser()
 
         from server.mcp_http_server import get_project_context
@@ -480,7 +481,7 @@ See [[Architecture]] and [[Setup]].
         assert result["success"] is True
         assert "related_pages" in result
         page_names = [p["name"] for p in result["related_pages"]]
-        assert "Architecture" in page_names or "Codex/Project/Architecture" in page_names
+        assert "Architecture" in page_names or "Projects/Project/Architecture" in page_names
 
 
 class TestScopedSearch:
@@ -495,13 +496,13 @@ class TestScopedSearch:
             db = GraphDB(temp_db_path, enable_embeddings=False)
 
             # First index the folders
-            db.index_folders(["Codex", "Codex/ProjectA", "Codex/ProjectB"])
+            db.index_folders(["Projects", "Projects/ProjectA", "Projects/ProjectB"])
 
             # Create chunks in different folders
             chunks = [
                 Chunk(
-                    file_path="Codex/ProjectA/readme.md",
-                    folder_path="Codex/ProjectA",
+                    file_path="Projects/ProjectA/readme.md",
+                    folder_path="Projects/ProjectA",
                     header="Setup",
                     content="Install Python dependencies",
                     links=[],
@@ -509,8 +510,8 @@ class TestScopedSearch:
                     frontmatter={}
                 ),
                 Chunk(
-                    file_path="Codex/ProjectB/readme.md",
-                    folder_path="Codex/ProjectB",
+                    file_path="Projects/ProjectB/readme.md",
+                    folder_path="Projects/ProjectB",
                     header="Setup",
                     content="Install Python dependencies",
                     links=[],
@@ -522,12 +523,12 @@ class TestScopedSearch:
             db.index_chunks(chunks)
 
             # Search with scope should only return matching folder
-            results = db.keyword_search("Python", scope="Codex/ProjectA")
+            results = db.keyword_search("Python", scope="Projects/ProjectA")
 
             assert len(results) == 1
             assert "ProjectA" in results[0]["col0"]["file_path"]
 
-    def test_semantic_search_with_folder_scope(self, temp_db_path, mock_openai_embeddings):
+    def test_semantic_search_with_folder_scope(self, temp_db_path):
         """semantic_search should filter results to specified folder scope."""
         # Skip this test since LadybugDB doesn't support vector indexes in this env
         pytest.skip("LadybugDB vector index not supported in test environment")
@@ -538,13 +539,13 @@ class TestScopedSearch:
         db = GraphDB(temp_db_path, enable_embeddings=True)
 
         # First index the folders
-        db.index_folders(["Realm", "Realm/Health", "Codex", "Codex/Project"])
+        db.index_folders(["Area", "Area/Health", "Projects", "Projects/Project"])
 
         # Create chunks in different folders
         chunks = [
             Chunk(
-                file_path="Realm/Health/diet.md",
-                folder_path="Realm/Health",
+                file_path="Area/Health/diet.md",
+                folder_path="Area/Health",
                 header="Diet",
                 content="Healthy eating habits",
                 links=[],
@@ -552,8 +553,8 @@ class TestScopedSearch:
                 frontmatter={}
             ),
             Chunk(
-                file_path="Codex/Project/notes.md",
-                folder_path="Codex/Project",
+                file_path="Projects/Project/notes.md",
+                folder_path="Projects/Project",
                 header="Notes",
                 content="Healthy coding practices",
                 links=[],
@@ -567,14 +568,14 @@ class TestScopedSearch:
         # Search with scope
         results = db.semantic_search(
             query="healthy practices",
-            scope="Realm/Health",
+            scope="Area/Health",
             limit=10
         )
 
-        # All results should be from Realm/Health folder
+        # All results should be from Area/Health folder
         for result in results:
             chunk = result.get("col0", {})
-            assert chunk.get("folder_path", "").startswith("Realm/Health")
+            assert chunk.get("folder_path", "").startswith("Area/Health")
 
     @pytest.mark.asyncio
     async def test_hybrid_search_tool_with_scope(self, temp_space_path, monkeypatch):
@@ -587,7 +588,7 @@ class TestScopedSearch:
         result = await hybrid_search_tool(
             query="test query",
             limit=10,
-            scope="Codex/MyProject"
+            scope="Projects/MyProject"
         )
 
         # Should not raise error about unexpected parameter
@@ -602,8 +603,8 @@ class TestChunkWithFolderPath:
         from server.parser.space_parser import Chunk
 
         chunk = Chunk(
-            file_path="Codex/Project/readme.md",
-            folder_path="Codex/Project",
+            file_path="Projects/Project/readme.md",
+            folder_path="Projects/Project",
             header="Title",
             content="Content",
             links=[],
@@ -611,7 +612,7 @@ class TestChunkWithFolderPath:
             frontmatter={}
         )
 
-        assert chunk.folder_path == "Codex/Project"
+        assert chunk.folder_path == "Projects/Project"
 
     def test_chunk_has_frontmatter_attribute(self):
         """Chunk should have frontmatter dict attribute."""
@@ -628,4 +629,5 @@ class TestChunkWithFolderPath:
         )
 
         assert chunk.frontmatter["github"] == "owner/repo"
+        assert "python" in chunk.frontmatter["tags"]
         assert "python" in chunk.frontmatter["tags"]

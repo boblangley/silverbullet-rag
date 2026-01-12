@@ -132,7 +132,7 @@ async def hybrid_search_tool(
         fusion_method: "rrf" (Reciprocal Rank Fusion) or "weighted"
         semantic_weight: Weight for semantic results (0-1)
         keyword_weight: Weight for keyword results (0-1)
-        scope: Optional folder path to scope results to (e.g., "Codex/ProjectA")
+        scope: Optional folder path to scope results to (e.g., "Projects/ProjectA")
 
     Returns:
         Fused search results sorted by combined score
@@ -168,7 +168,7 @@ async def get_project_context(
 
     Args:
         github_remote: GitHub repository in "org/repo" format (e.g., "anthropics/claude-code")
-        folder_path: Folder path in Silverbullet space (e.g., "Codex/MyProject")
+        folder_path: Folder path in Silverbullet space (e.g., "Projects/MyProject")
 
     Returns:
         Project context including index page content, frontmatter, and related pages
@@ -247,7 +247,7 @@ async def get_project_context(
                     })
 
         # Also check for subdirectory matching the project file name
-        # e.g., for Codex/Project.md, check Codex/Project/ directory
+        # e.g., for Projects/Project.md, check Projects/Project/ directory
         project_subdir = project_file.parent / project_file.stem
         if project_subdir.exists() and project_subdir.is_dir():
             for md_file in project_subdir.glob("**/*.md"):

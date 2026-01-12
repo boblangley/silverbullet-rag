@@ -1,7 +1,7 @@
 """Hybrid search combining keyword and semantic search."""
 
-from typing import List, Dict, Any, Optional, Literal
 import logging
+from typing import Any, Dict, List, Literal, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class HybridSearch:
             fusion_method: Method to combine results - "rrf" (Reciprocal Rank Fusion) or "weighted"
             semantic_weight: Weight for semantic scores (used with weighted fusion)
             keyword_weight: Weight for keyword scores (used with weighted fusion)
-            scope: Optional folder path to scope results to (e.g., "Codex/ProjectA")
+            scope: Optional folder path to scope results to (e.g., "Projects/ProjectA")
 
         Returns:
             List of results with combined scores, sorted by relevance
