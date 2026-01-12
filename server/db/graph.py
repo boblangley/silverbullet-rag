@@ -752,5 +752,4 @@ class GraphDB:
         # LadybugDB values are already Python-compatible
         # Add any necessary conversions here
         return value
-        # Add any necessary conversions here
-        return value
+

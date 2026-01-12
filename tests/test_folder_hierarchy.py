@@ -630,4 +630,4 @@ class TestChunkWithFolderPath:
 
         assert chunk.frontmatter["github"] == "owner/repo"
         assert "python" in chunk.frontmatter["tags"]
-        assert "python" in chunk.frontmatter["tags"]
+
