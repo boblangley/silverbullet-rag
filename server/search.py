@@ -16,6 +16,7 @@ class HybridSearch:
             graph_db: GraphDB instance with both keyword and semantic search capabilities
         """
         from .db.graph import GraphDB
+
         self.graph_db: GraphDB = graph_db
 
     def search(
@@ -71,7 +72,7 @@ class HybridSearch:
                     limit=limit * 2,  # Get more candidates for better fusion
                     filter_tags=filter_tags,
                     filter_pages=filter_pages,
-                    scope=scope
+                    scope=scope,
                 )
                 logger.info(f"Semantic search returned {len(semantic_results)} results")
             except Exception as e:
@@ -92,7 +93,11 @@ class HybridSearch:
             )
         else:  # weighted
             fused_results = self._weighted_fusion(
-                keyword_results, semantic_results, semantic_weight, keyword_weight, limit
+                keyword_results,
+                semantic_results,
+                semantic_weight,
+                keyword_weight,
+                limit,
             )
 
         return fused_results
@@ -102,7 +107,7 @@ class HybridSearch:
         keyword_results: List[Dict[str, Any]],
         semantic_results: List[Dict[str, Any]],
         limit: int,
-        k: int = 60
+        k: int = 60,
     ) -> List[Dict[str, Any]]:
         """Combine results using Reciprocal Rank Fusion (RRF).
 
@@ -132,7 +137,7 @@ class HybridSearch:
             chunk_data[chunk_id] = {
                 "chunk": chunk,
                 "keyword_score": result.get("bm25_score", 0.0),
-                "semantic_score": 0.0
+                "semantic_score": 0.0,
             }
 
         # Process semantic results
@@ -152,7 +157,7 @@ class HybridSearch:
                 chunk_data[chunk_id] = {
                     "chunk": chunk,
                     "keyword_score": 0.0,
-                    "semantic_score": 1.0 / (k + rank)
+                    "semantic_score": 1.0 / (k + rank),
                 }
 
         # Normalize RRF scores to 0-1 range
@@ -168,12 +173,14 @@ class HybridSearch:
         results = []
         for chunk_id, score in rrf_scores.items():
             data = chunk_data[chunk_id]
-            results.append({
-                "chunk": data["chunk"],
-                "hybrid_score": round(score, 4),
-                "keyword_score": data["keyword_score"],
-                "semantic_score": data["semantic_score"]
-            })
+            results.append(
+                {
+                    "chunk": data["chunk"],
+                    "hybrid_score": round(score, 4),
+                    "keyword_score": data["keyword_score"],
+                    "semantic_score": data["semantic_score"],
+                }
+            )
 
         # Sort by hybrid score (descending) and limit
         results.sort(key=lambda x: x["hybrid_score"], reverse=True)
@@ -185,7 +192,7 @@ class HybridSearch:
         semantic_results: List[Dict[str, Any]],
         semantic_weight: float,
         keyword_weight: float,
-        limit: int
+        limit: int,
     ) -> List[Dict[str, Any]]:
         """Combine results using weighted score fusion.
 
@@ -222,6 +229,7 @@ class HybridSearch:
             if chunk_id:
                 # Use exponential decay: score = exp(-0.1 * rank)
                 import math
+
                 semantic_scores[chunk_id] = math.exp(-0.1 * rank)
 
         # Combine all chunk IDs
@@ -248,12 +256,14 @@ class HybridSearch:
             sem_score = semantic_scores.get(chunk_id, 0.0)
             weighted_score = keyword_weight * kw_score + semantic_weight * sem_score
 
-            results.append({
-                "chunk": chunk_data[chunk_id],
-                "hybrid_score": round(weighted_score, 4),
-                "keyword_score": kw_score,
-                "semantic_score": sem_score
-            })
+            results.append(
+                {
+                    "chunk": chunk_data[chunk_id],
+                    "hybrid_score": round(weighted_score, 4),
+                    "keyword_score": kw_score,
+                    "semantic_score": sem_score,
+                }
+            )
 
         # Sort by weighted score (descending) and limit
         results.sort(key=lambda x: x["hybrid_score"], reverse=True)
@@ -263,7 +273,7 @@ class HybridSearch:
         self,
         results: List[Dict[str, Any]],
         keyword_only: bool = False,
-        semantic_only: bool = False
+        semantic_only: bool = False,
     ) -> List[Dict[str, Any]]:
         """Format results to unified structure.
 
@@ -280,21 +290,26 @@ class HybridSearch:
             chunk = result.get("col0", {})
 
             if keyword_only:
-                formatted.append({
-                    "chunk": chunk,
-                    "hybrid_score": result.get("bm25_score", 0.0),
-                    "keyword_score": result.get("bm25_score", 0.0),
-                    "semantic_score": 0.0
-                })
+                formatted.append(
+                    {
+                        "chunk": chunk,
+                        "hybrid_score": result.get("bm25_score", 0.0),
+                        "keyword_score": result.get("bm25_score", 0.0),
+                        "semantic_score": 0.0,
+                    }
+                )
             elif semantic_only:
                 # Use rank-based scoring for semantic results
                 import math
+
                 rank_score = math.exp(-0.1 * (i + 1))
-                formatted.append({
-                    "chunk": chunk,
-                    "hybrid_score": round(rank_score, 4),
-                    "keyword_score": 0.0,
-                    "semantic_score": round(rank_score, 4)
-                })
+                formatted.append(
+                    {
+                        "chunk": chunk,
+                        "hybrid_score": round(rank_score, 4),
+                        "keyword_score": 0.0,
+                        "semantic_score": round(rank_score, 4),
+                    }
+                )
 
         return formatted

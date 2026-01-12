@@ -13,7 +13,7 @@ def init_index(
     space_path: str = None,
     db_path: str = None,
     enable_embeddings: bool = None,
-    rebuild: bool = False
+    rebuild: bool = False,
 ) -> int:
     """Parse the Silverbullet space and index all content.
 
@@ -77,32 +77,30 @@ def main():
     parser.add_argument(
         "--rebuild",
         action="store_true",
-        help="Clear the database and rebuild from scratch"
+        help="Clear the database and rebuild from scratch",
     )
     parser.add_argument(
         "--space-path",
         type=str,
         default=None,
-        help="Path to the Silverbullet space (default: SPACE_PATH env or /space)"
+        help="Path to the Silverbullet space (default: SPACE_PATH env or /space)",
     )
     parser.add_argument(
         "--db-path",
         type=str,
         default=None,
-        help="Path to the database directory (default: DB_PATH env or /data/ladybug)"
+        help="Path to the database directory (default: DB_PATH env or /data/ladybug)",
     )
     parser.add_argument(
-        "--no-embeddings",
-        action="store_true",
-        help="Disable embedding generation"
+        "--no-embeddings", action="store_true", help="Disable embedding generation"
     )
 
     args = parser.parse_args()
 
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     # Determine embeddings setting
@@ -115,7 +113,7 @@ def main():
             space_path=args.space_path,
             db_path=args.db_path,
             enable_embeddings=enable_embeddings,
-            rebuild=args.rebuild
+            rebuild=args.rebuild,
         )
         logging.info(f"Successfully indexed {count} chunks")
         sys.exit(0)

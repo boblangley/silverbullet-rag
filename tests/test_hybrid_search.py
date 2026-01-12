@@ -21,18 +21,21 @@ def diverse_docs_for_hybrid(temp_space_path: str) -> Path:
 
     # Document 1: Exact keyword match but semantically less relevant
     doc1 = space / "fruit_database.md"
-    doc1.write_text("""# Fruit Database
+    doc1.write_text(
+        """# Fruit Database
 tags: #food #nutrition
 
 ## Fruit Information
 
 This database contains information about fruits. The fruit database has
 entries for apples, oranges, and bananas.
-""")
+"""
+    )
 
     # Document 2: Semantically relevant but fewer keyword matches
     doc2 = space / "data_storage_systems.md"
-    doc2.write_text("""# Data Storage Systems
+    doc2.write_text(
+        """# Data Storage Systems
 tags: #technology #architecture
 
 ## Modern Storage Solutions
@@ -40,11 +43,13 @@ tags: #technology #architecture
 Contemporary data management platforms utilize various persistence mechanisms
 including relational stores, document collections, and graph repositories.
 These systems handle information efficiently and scale horizontally.
-""")
+"""
+    )
 
     # Document 3: Both keyword and semantic relevance
     doc3 = space / "database_architecture.md"
-    doc3.write_text("""# Database Architecture
+    doc3.write_text(
+        """# Database Architecture
 tags: #database #system-design
 
 ## Database Design Patterns
@@ -52,18 +57,21 @@ tags: #database #system-design
 Modern database systems require careful architectural planning. Database
 schemas, indexing strategies, and query optimization are essential for
 building scalable database applications.
-""")
+"""
+    )
 
     # Document 4: Different topic entirely
     doc4 = space / "cooking_recipes.md"
-    doc4.write_text("""# Cooking Recipes
+    doc4.write_text(
+        """# Cooking Recipes
 tags: #cooking #recipes
 
 ## Italian Cuisine
 
 Learn to make pasta, pizza, and risotto. These traditional recipes
 have been passed down through generations.
-""")
+"""
+    )
 
     return space
 
@@ -108,7 +116,9 @@ def test_hybrid_search_basic(temp_db_path: str, diverse_docs_for_hybrid: Path):
         assert "semantic_score" in result, "Each result should have semantic score"
 
 
-def test_hybrid_search_outperforms_keyword_only(temp_db_path: str, diverse_docs_for_hybrid: Path):
+def test_hybrid_search_outperforms_keyword_only(
+    temp_db_path: str, diverse_docs_for_hybrid: Path
+):
     """Test that hybrid search finds semantically relevant documents that keyword search misses.
 
     Query: "data management platform"
@@ -132,11 +142,14 @@ def test_hybrid_search_outperforms_keyword_only(temp_db_path: str, diverse_docs_
     hybrid_paths = [r["chunk"].get("file_path", "") for r in hybrid_results]
 
     # Should find the semantically relevant document
-    assert any("data_storage_systems" in path for path in hybrid_paths), \
-        "Hybrid search should find semantically relevant document"
+    assert any(
+        "data_storage_systems" in path for path in hybrid_paths
+    ), "Hybrid search should find semantically relevant document"
 
 
-def test_hybrid_search_outperforms_semantic_only(temp_db_path: str, diverse_docs_for_hybrid: Path):
+def test_hybrid_search_outperforms_semantic_only(
+    temp_db_path: str, diverse_docs_for_hybrid: Path
+):
     """Test that hybrid search benefits from keyword precision.
 
     Query with specific technical term should rank exact matches higher.
@@ -159,8 +172,9 @@ def test_hybrid_search_outperforms_semantic_only(temp_db_path: str, diverse_docs
     top_hybrid_path = top_hybrid.get("chunk", {}).get("file_path", "")
 
     # Should prioritize documents with the exact term
-    assert "database" in top_hybrid_path.lower(), \
-        "Hybrid search should prioritize exact keyword matches"
+    assert (
+        "database" in top_hybrid_path.lower()
+    ), "Hybrid search should prioritize exact keyword matches"
 
 
 def test_hybrid_search_rrf_fusion(temp_db_path: str, diverse_docs_for_hybrid: Path):
@@ -187,14 +201,20 @@ def test_hybrid_search_rrf_fusion(temp_db_path: str, diverse_docs_for_hybrid: Pa
     # Each ranking contributes at most 1/(k+1) ≈ 0.016 for rank 1
     for result in results:
         rrf_score = result["hybrid_score"]
-        assert 0 <= rrf_score <= 1, f"RRF score should be normalized between 0-1, got {rrf_score}"
+        assert (
+            0 <= rrf_score <= 1
+        ), f"RRF score should be normalized between 0-1, got {rrf_score}"
 
     # Results should be sorted by hybrid score
     scores = [r["hybrid_score"] for r in results]
-    assert scores == sorted(scores, reverse=True), "Results should be sorted by hybrid score"
+    assert scores == sorted(
+        scores, reverse=True
+    ), "Results should be sorted by hybrid score"
 
 
-def test_hybrid_search_weighted_fusion(temp_db_path: str, diverse_docs_for_hybrid: Path):
+def test_hybrid_search_weighted_fusion(
+    temp_db_path: str, diverse_docs_for_hybrid: Path
+):
     """Test weighted fusion with custom weights for keyword vs semantic."""
     # Arrange
     graph_db = GraphDB(temp_db_path, enable_embeddings=True)
@@ -210,7 +230,7 @@ def test_hybrid_search_weighted_fusion(temp_db_path: str, diverse_docs_for_hybri
         limit=10,
         fusion_method="weighted",
         semantic_weight=0.7,
-        keyword_weight=0.3
+        keyword_weight=0.3,
     )
 
     # Act - favor keyword search (70% keyword, 30% semantic)
@@ -219,7 +239,7 @@ def test_hybrid_search_weighted_fusion(temp_db_path: str, diverse_docs_for_hybri
         limit=10,
         fusion_method="weighted",
         semantic_weight=0.3,
-        keyword_weight=0.7
+        keyword_weight=0.7,
     )
 
     # Assert - different weightings should produce different rankings
@@ -229,9 +249,10 @@ def test_hybrid_search_weighted_fusion(temp_db_path: str, diverse_docs_for_hybri
     # Top results might differ based on weighting
     # At minimum, scores should be different
     if semantic_heavy_top and keyword_heavy_top:
-        assert semantic_heavy_top["hybrid_score"] != keyword_heavy_top["hybrid_score"] or \
-               semantic_heavy_top["chunk"]["id"] != keyword_heavy_top["chunk"]["id"], \
-               "Different fusion weights should affect results"
+        assert (
+            semantic_heavy_top["hybrid_score"] != keyword_heavy_top["hybrid_score"]
+            or semantic_heavy_top["chunk"]["id"] != keyword_heavy_top["chunk"]["id"]
+        ), "Different fusion weights should affect results"
 
 
 def test_hybrid_search_with_filters(temp_db_path: str, diverse_docs_for_hybrid: Path):
@@ -245,11 +266,7 @@ def test_hybrid_search_with_filters(temp_db_path: str, diverse_docs_for_hybrid: 
     hybrid_search = HybridSearch(graph_db)
 
     # Act - filter by tag
-    results = hybrid_search.search(
-        query="database",
-        limit=10,
-        filter_tags=["database"]
-    )
+    results = hybrid_search.search(query="database", limit=10, filter_tags=["database"])
 
     # Assert
     assert len(results) > 0, "Should find results with tag filter"
@@ -300,7 +317,9 @@ def test_hybrid_search_no_results(temp_db_path: str, diverse_docs_for_hybrid: Pa
     assert len(results) == 0, "Should return empty list when no results match"
 
 
-def test_hybrid_search_limit_parameter(temp_db_path: str, diverse_docs_for_hybrid: Path):
+def test_hybrid_search_limit_parameter(
+    temp_db_path: str, diverse_docs_for_hybrid: Path
+):
     """Test that limit parameter controls number of results."""
     # Arrange
     graph_db = GraphDB(temp_db_path, enable_embeddings=True)
@@ -316,7 +335,9 @@ def test_hybrid_search_limit_parameter(temp_db_path: str, diverse_docs_for_hybri
 
     # Assert
     assert len(results_small) <= 2, "Should respect limit parameter"
-    assert len(results_large) >= len(results_small), "Larger limit should return more results"
+    assert len(results_large) >= len(
+        results_small
+    ), "Larger limit should return more results"
 
 
 def test_hybrid_search_deduplication(temp_db_path: str, diverse_docs_for_hybrid: Path):
@@ -341,4 +362,3 @@ def test_hybrid_search_deduplication(temp_db_path: str, diverse_docs_for_hybrid:
     unique_ids = set(chunk_ids)
 
     assert len(chunk_ids) == len(unique_ids), "Hybrid search should deduplicate results"
-

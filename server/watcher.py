@@ -13,7 +13,9 @@ from .parser import SpaceParser
 class SpaceWatcher(FileSystemEventHandler):
     """Handle file system events in the Silverbullet space."""
 
-    def __init__(self, space_path: str, graph_db: GraphDB = None, parser: SpaceParser = None):
+    def __init__(
+        self, space_path: str, graph_db: GraphDB = None, parser: SpaceParser = None
+    ):
         self.space_path = space_path
         self.graph_db = graph_db if graph_db else GraphDB("/db")
         self.parser = parser if parser else SpaceParser()
@@ -33,7 +35,7 @@ class SpaceWatcher(FileSystemEventHandler):
 
     def on_modified(self, event):
         """Handle file modification."""
-        if event.is_directory or not event.src_path.endswith('.md'):
+        if event.is_directory or not event.src_path.endswith(".md"):
             return
 
         if not self._should_process(event.src_path):
@@ -44,7 +46,7 @@ class SpaceWatcher(FileSystemEventHandler):
 
     def on_created(self, event):
         """Handle file creation."""
-        if event.is_directory or not event.src_path.endswith('.md'):
+        if event.is_directory or not event.src_path.endswith(".md"):
             return
 
         logging.info(f"File created: {event.src_path}")
@@ -52,7 +54,7 @@ class SpaceWatcher(FileSystemEventHandler):
 
     def on_deleted(self, event):
         """Handle file deletion."""
-        if event.is_directory or not event.src_path.endswith('.md'):
+        if event.is_directory or not event.src_path.endswith(".md"):
             return
 
         logging.info(f"File deleted: {event.src_path}")
@@ -82,8 +84,8 @@ def watch_space(space_path: str = "/space"):
     """
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        format="%(asctime)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     event_handler = SpaceWatcher(space_path)

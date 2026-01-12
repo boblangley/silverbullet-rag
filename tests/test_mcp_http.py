@@ -23,7 +23,9 @@ class TestMCPHTTPServer:
         Returns:
             httpx.AsyncClient configured for local MCP server
         """
-        async with httpx.AsyncClient(base_url="http://localhost:8000", timeout=10.0) as client:
+        async with httpx.AsyncClient(
+            base_url="http://localhost:8000", timeout=10.0
+        ) as client:
             yield client
 
     @pytest.mark.asyncio
@@ -34,6 +36,7 @@ class TestMCPHTTPServer:
         """
         try:
             from server.mcp_http_server import mcp, initialize_server
+
             assert mcp is not None
             assert callable(initialize_server)
         except ImportError as e:
@@ -51,7 +54,7 @@ class TestMCPHTTPServer:
             semantic_search,
             hybrid_search_tool,
             read_page,
-            update_page
+            update_page,
         )
 
         # All tools should be callable
@@ -73,6 +76,7 @@ class TestMCPHTTPServer:
 
         # Initialize graph_db for testing
         import server.mcp_http_server as mcp_module
+
         mcp_module.graph_db = GraphDB(temp_db_path)
 
         # Test query execution
@@ -92,6 +96,7 @@ class TestMCPHTTPServer:
 
         # Initialize graph_db for testing
         import server.mcp_http_server as mcp_module
+
         mcp_module.graph_db = GraphDB(temp_db_path)
 
         # Test search execution
@@ -101,7 +106,9 @@ class TestMCPHTTPServer:
         assert "results" in result
 
     @pytest.mark.asyncio
-    async def test_read_page_tool_directly(self, sample_markdown_file, temp_space_path, monkeypatch):
+    async def test_read_page_tool_directly(
+        self, sample_markdown_file, temp_space_path, monkeypatch
+    ):
         """GREEN: Test read_page tool function directly.
 
         This should PASS - tests tool logic without server.
@@ -214,11 +221,9 @@ class TestMCPHTTPServer:
             "method": "tools/call",
             "params": {
                 "name": "cypher_query",
-                "arguments": {
-                    "query": "MATCH (n) RETURN count(n) as count"
-                }
+                "arguments": {"query": "MATCH (n) RETURN count(n) as count"},
             },
-            "id": 1
+            "id": 1,
         }
 
         response = await http_client.post("/mcp", json=payload)
@@ -238,13 +243,8 @@ class TestMCPHTTPServer:
         payload = {
             "jsonrpc": "2.0",
             "method": "tools/call",
-            "params": {
-                "name": "keyword_search",
-                "arguments": {
-                    "query": "test"
-                }
-            },
-            "id": 2
+            "params": {"name": "keyword_search", "arguments": {"query": "test"}},
+            "id": 2,
         }
 
         response = await http_client.post("/mcp", json=payload)
@@ -266,12 +266,9 @@ class TestMCPHTTPServer:
             "method": "tools/call",
             "params": {
                 "name": "semantic_search",
-                "arguments": {
-                    "query": "python programming",
-                    "limit": 5
-                }
+                "arguments": {"query": "python programming", "limit": 5},
             },
-            "id": 3
+            "id": 3,
         }
 
         response = await http_client.post("/mcp", json=payload)
@@ -296,10 +293,10 @@ class TestMCPHTTPServer:
                 "arguments": {
                     "query": "test search",
                     "limit": 10,
-                    "fusion_method": "rrf"
-                }
+                    "fusion_method": "rrf",
+                },
             },
-            "id": 4
+            "id": 4,
         }
 
         response = await http_client.post("/mcp", json=payload)
@@ -311,7 +308,9 @@ class TestMCPHTTPServer:
 
     @pytest.mark.skip(reason="Requires running HTTP server - integration test")
     @pytest.mark.asyncio
-    async def test_read_page_tool(self, http_client, sample_markdown_file, temp_space_path):
+    async def test_read_page_tool(
+        self, http_client, sample_markdown_file, temp_space_path
+    ):
         """RED: Test read_page tool via HTTP.
 
         This should FAIL because tool isn't implemented yet.
@@ -320,13 +319,8 @@ class TestMCPHTTPServer:
         payload = {
             "jsonrpc": "2.0",
             "method": "tools/call",
-            "params": {
-                "name": "read_page",
-                "arguments": {
-                    "page_name": "test_page.md"
-                }
-            },
-            "id": 5
+            "params": {"name": "read_page", "arguments": {"page_name": "test_page.md"}},
+            "id": 5,
         }
 
         response = await http_client.post("/mcp", json=payload)
@@ -351,10 +345,10 @@ class TestMCPHTTPServer:
                 "name": "update_page",
                 "arguments": {
                     "page_name": "new_test_page.md",
-                    "content": "# New Test Page\n\nThis is a test."
-                }
+                    "content": "# New Test Page\n\nThis is a test.",
+                },
             },
-            "id": 6
+            "id": 6,
         }
 
         response = await http_client.post("/mcp", json=payload)
@@ -375,11 +369,8 @@ class TestMCPHTTPServer:
         payload = {
             "jsonrpc": "2.0",
             "method": "tools/call",
-            "params": {
-                "name": "nonexistent_tool",
-                "arguments": {}
-            },
-            "id": 7
+            "params": {"name": "nonexistent_tool", "arguments": {}},
+            "id": 7,
         }
 
         response = await http_client.post("/mcp", json=payload)
@@ -403,9 +394,9 @@ class TestMCPHTTPServer:
                 "method": "tools/call",
                 "params": {
                     "name": "keyword_search",
-                    "arguments": {"query": f"test{i}"}
+                    "arguments": {"query": f"test{i}"},
                 },
-                "id": 100 + i
+                "id": 100 + i,
             }
             for i in range(5)
         ]
@@ -424,7 +415,9 @@ class TestMCPHTTPServer:
 class TestMCPHTTPIntegration:
     """Integration tests requiring a running server."""
 
-    @pytest.mark.skip(reason="Requires running HTTP server - will enable after GREEN phase")
+    @pytest.mark.skip(
+        reason="Requires running HTTP server - will enable after GREEN phase"
+    )
     @pytest.mark.asyncio
     async def test_full_workflow(self, http_client, temp_space_path):
         """Integration test: Create page, search, read, update.
@@ -439,10 +432,10 @@ class TestMCPHTTPIntegration:
                 "name": "update_page",
                 "arguments": {
                     "page_name": "workflow_test.md",
-                    "content": "# Workflow Test\n\nTesting the full workflow."
-                }
+                    "content": "# Workflow Test\n\nTesting the full workflow.",
+                },
             },
-            "id": 1
+            "id": 1,
         }
         response = await http_client.post("/mcp", json=create_payload)
         assert response.status_code == 200
@@ -451,11 +444,8 @@ class TestMCPHTTPIntegration:
         search_payload = {
             "jsonrpc": "2.0",
             "method": "tools/call",
-            "params": {
-                "name": "keyword_search",
-                "arguments": {"query": "workflow"}
-            },
-            "id": 2
+            "params": {"name": "keyword_search", "arguments": {"query": "workflow"}},
+            "id": 2,
         }
         response = await http_client.post("/mcp", json=search_payload)
         assert response.status_code == 200
@@ -466,9 +456,9 @@ class TestMCPHTTPIntegration:
             "method": "tools/call",
             "params": {
                 "name": "read_page",
-                "arguments": {"page_name": "workflow_test.md"}
+                "arguments": {"page_name": "workflow_test.md"},
             },
-            "id": 3
+            "id": 3,
         }
         response = await http_client.post("/mcp", json=read_payload)
         assert response.status_code == 200

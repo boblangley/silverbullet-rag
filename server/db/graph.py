@@ -49,7 +49,8 @@ class GraphDB:
             # Create Chunk table with embedding field (FLOAT[] for vector storage)
             # frontmatter is stored as JSON string for flexible schema
             if self.enable_embeddings:
-                conn.execute("""
+                conn.execute(
+                    """
                     CREATE NODE TABLE IF NOT EXISTS Chunk(
                         id STRING,
                         file_path STRING,
@@ -59,9 +60,11 @@ class GraphDB:
                         embedding FLOAT[],
                         PRIMARY KEY(id)
                     )
-                """)
+                """
+                )
             else:
-                conn.execute("""
+                conn.execute(
+                    """
                     CREATE NODE TABLE IF NOT EXISTS Chunk(
                         id STRING,
                         file_path STRING,
@@ -70,29 +73,39 @@ class GraphDB:
                         frontmatter STRING,
                         PRIMARY KEY(id)
                     )
-                """)
+                """
+                )
 
-            conn.execute("CREATE NODE TABLE IF NOT EXISTS Page(name STRING, PRIMARY KEY(name))")
-            conn.execute("CREATE NODE TABLE IF NOT EXISTS Tag(name STRING, PRIMARY KEY(name))")
-            conn.execute("""
+            conn.execute(
+                "CREATE NODE TABLE IF NOT EXISTS Page(name STRING, PRIMARY KEY(name))"
+            )
+            conn.execute(
+                "CREATE NODE TABLE IF NOT EXISTS Tag(name STRING, PRIMARY KEY(name))"
+            )
+            conn.execute(
+                """
                 CREATE NODE TABLE IF NOT EXISTS Folder(
                     name STRING,
                     path STRING,
                     has_index_page BOOL,
                     PRIMARY KEY(path)
                 )
-            """)
+            """
+            )
             # Attribute node for inline attributes [name: value]
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE NODE TABLE IF NOT EXISTS Attribute(
                     id STRING,
                     name STRING,
                     value STRING,
                     PRIMARY KEY(id)
                 )
-            """)
+            """
+            )
             # DataBlock node for ```#tagname YAML blocks
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE NODE TABLE IF NOT EXISTS DataBlock(
                     id STRING,
                     tag STRING,
@@ -100,18 +113,33 @@ class GraphDB:
                     file_path STRING,
                     PRIMARY KEY(id)
                 )
-            """)
+            """
+            )
             # Relationships
             conn.execute("CREATE REL TABLE IF NOT EXISTS LINKS_TO(FROM Chunk TO Page)")
             conn.execute("CREATE REL TABLE IF NOT EXISTS TAGGED(FROM Chunk TO Tag)")
-            conn.execute("CREATE REL TABLE IF NOT EXISTS CONTAINS(FROM Folder TO Folder)")
-            conn.execute("CREATE REL TABLE IF NOT EXISTS FOLDER_CONTAINS_PAGE(FROM Folder TO Page)")
-            conn.execute("CREATE REL TABLE IF NOT EXISTS IN_FOLDER(FROM Chunk TO Folder)")
+            conn.execute(
+                "CREATE REL TABLE IF NOT EXISTS CONTAINS(FROM Folder TO Folder)"
+            )
+            conn.execute(
+                "CREATE REL TABLE IF NOT EXISTS FOLDER_CONTAINS_PAGE(FROM Folder TO Page)"
+            )
+            conn.execute(
+                "CREATE REL TABLE IF NOT EXISTS IN_FOLDER(FROM Chunk TO Folder)"
+            )
             # New relationships for transclusions, attributes, and data blocks
-            conn.execute("CREATE REL TABLE IF NOT EXISTS EMBEDS(FROM Chunk TO Page, header STRING)")
-            conn.execute("CREATE REL TABLE IF NOT EXISTS HAS_ATTRIBUTE(FROM Chunk TO Attribute)")
-            conn.execute("CREATE REL TABLE IF NOT EXISTS HAS_DATA_BLOCK(FROM Chunk TO DataBlock)")
-            conn.execute("CREATE REL TABLE IF NOT EXISTS DATA_TAGGED(FROM DataBlock TO Tag)")
+            conn.execute(
+                "CREATE REL TABLE IF NOT EXISTS EMBEDS(FROM Chunk TO Page, header STRING)"
+            )
+            conn.execute(
+                "CREATE REL TABLE IF NOT EXISTS HAS_ATTRIBUTE(FROM Chunk TO Attribute)"
+            )
+            conn.execute(
+                "CREATE REL TABLE IF NOT EXISTS HAS_DATA_BLOCK(FROM Chunk TO DataBlock)"
+            )
+            conn.execute(
+                "CREATE REL TABLE IF NOT EXISTS DATA_TAGGED(FROM DataBlock TO Tag)"
+            )
 
             # Create vector index for semantic search if embeddings are enabled
             if self.enable_embeddings:
@@ -126,11 +154,13 @@ class GraphDB:
         try:
             conn = lb.Connection(self.db)
             # Create HNSW vector index on Chunk.embedding with cosine similarity
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE VECTOR INDEX IF NOT EXISTS chunk_embedding_idx
                 ON Chunk(embedding)
                 WITH {metric: 'cosine', M: 16, efConstruction: 200}
-            """)
+            """
+            )
             logger.info("Vector index created successfully")
         except Exception as e:
             logger.warning(f"Vector index may already exist: {e}")
@@ -159,7 +189,11 @@ class GraphDB:
             chunk_id = f"{chunk.file_path}#{chunk.header}"
 
             # Serialize frontmatter to JSON string (with date handling)
-            frontmatter_json = json.dumps(chunk.frontmatter, cls=DateTimeEncoder) if chunk.frontmatter else "{}"
+            frontmatter_json = (
+                json.dumps(chunk.frontmatter, cls=DateTimeEncoder)
+                if chunk.frontmatter
+                else "{}"
+            )
 
             # Build query based on whether embeddings are enabled
             if self.enable_embeddings and embeddings:
@@ -177,7 +211,7 @@ class GraphDB:
                     "header": chunk.header,
                     "content": chunk.content,
                     "frontmatter": frontmatter_json,
-                    "embedding": embeddings[i]
+                    "embedding": embeddings[i],
                 }
             else:
                 query = """
@@ -192,7 +226,7 @@ class GraphDB:
                     "file_path": chunk.file_path,
                     "header": chunk.header,
                     "content": chunk.content,
-                    "frontmatter": frontmatter_json
+                    "frontmatter": frontmatter_json,
                 }
 
             conn.execute(query, params)
@@ -204,10 +238,7 @@ class GraphDB:
                 MERGE (t:Page {name: $link_name})
                 MERGE (c)-[:LINKS_TO]->(t)
                 """
-                conn.execute(link_query, {
-                    "chunk_id": chunk_id,
-                    "link_name": link
-                })
+                conn.execute(link_query, {"chunk_id": chunk_id, "link_name": link})
 
             # Create edges for tags
             for tag in chunk.tags:
@@ -216,39 +247,39 @@ class GraphDB:
                 MERGE (t:Tag {name: $tag_name})
                 MERGE (c)-[:TAGGED]->(t)
                 """
-                conn.execute(tag_query, {
-                    "chunk_id": chunk_id,
-                    "tag_name": tag
-                })
+                conn.execute(tag_query, {"chunk_id": chunk_id, "tag_name": tag})
 
             # Create folder relationship if chunk has folder_path
-            if hasattr(chunk, 'folder_path') and chunk.folder_path:
+            if hasattr(chunk, "folder_path") and chunk.folder_path:
                 folder_query = """
                 MATCH (c:Chunk {id: $chunk_id})
                 MATCH (f:Folder {path: $folder_path})
                 MERGE (c)-[:IN_FOLDER]->(f)
                 """
-                conn.execute(folder_query, {
-                    "chunk_id": chunk_id,
-                    "folder_path": chunk.folder_path
-                })
+                conn.execute(
+                    folder_query,
+                    {"chunk_id": chunk_id, "folder_path": chunk.folder_path},
+                )
 
             # Create edges for transclusions (EMBEDS relationship)
-            if hasattr(chunk, 'transclusions') and chunk.transclusions:
+            if hasattr(chunk, "transclusions") and chunk.transclusions:
                 for transclusion in chunk.transclusions:
                     embed_query = """
                     MATCH (c:Chunk {id: $chunk_id})
                     MERGE (p:Page {name: $target_page})
                     MERGE (c)-[:EMBEDS {header: $header}]->(p)
                     """
-                    conn.execute(embed_query, {
-                        "chunk_id": chunk_id,
-                        "target_page": transclusion.target_page,
-                        "header": transclusion.target_header or ""
-                    })
+                    conn.execute(
+                        embed_query,
+                        {
+                            "chunk_id": chunk_id,
+                            "target_page": transclusion.target_page,
+                            "header": transclusion.target_header or "",
+                        },
+                    )
 
             # Create nodes and edges for inline attributes
-            if hasattr(chunk, 'inline_attributes') and chunk.inline_attributes:
+            if hasattr(chunk, "inline_attributes") and chunk.inline_attributes:
                 for attr in chunk.inline_attributes:
                     attr_id = f"{chunk_id}#{attr.name}"
                     attr_query = """
@@ -257,15 +288,18 @@ class GraphDB:
                     SET a.name = $name, a.value = $value
                     MERGE (c)-[:HAS_ATTRIBUTE]->(a)
                     """
-                    conn.execute(attr_query, {
-                        "chunk_id": chunk_id,
-                        "attr_id": attr_id,
-                        "name": attr.name,
-                        "value": attr.value
-                    })
+                    conn.execute(
+                        attr_query,
+                        {
+                            "chunk_id": chunk_id,
+                            "attr_id": attr_id,
+                            "name": attr.name,
+                            "value": attr.value,
+                        },
+                    )
 
             # Create nodes and edges for data blocks
-            if hasattr(chunk, 'data_blocks') and chunk.data_blocks:
+            if hasattr(chunk, "data_blocks") and chunk.data_blocks:
                 for idx, data_block in enumerate(chunk.data_blocks):
                     block_id = f"{chunk_id}#datablock#{idx}"
                     data_json = json.dumps(data_block.data, cls=DateTimeEncoder)
@@ -275,25 +309,30 @@ class GraphDB:
                     SET d.tag = $tag, d.data = $data, d.file_path = $file_path
                     MERGE (c)-[:HAS_DATA_BLOCK]->(d)
                     """
-                    conn.execute(block_query, {
-                        "chunk_id": chunk_id,
-                        "block_id": block_id,
-                        "tag": data_block.tag,
-                        "data": data_json,
-                        "file_path": data_block.file_path
-                    })
+                    conn.execute(
+                        block_query,
+                        {
+                            "chunk_id": chunk_id,
+                            "block_id": block_id,
+                            "tag": data_block.tag,
+                            "data": data_json,
+                            "file_path": data_block.file_path,
+                        },
+                    )
                     # Also create tag relationship for the data block
                     data_tag_query = """
                     MATCH (d:DataBlock {id: $block_id})
                     MERGE (t:Tag {name: $tag_name})
                     MERGE (d)-[:DATA_TAGGED]->(t)
                     """
-                    conn.execute(data_tag_query, {
-                        "block_id": block_id,
-                        "tag_name": data_block.tag
-                    })
+                    conn.execute(
+                        data_tag_query,
+                        {"block_id": block_id, "tag_name": data_block.tag},
+                    )
 
-    def index_folders(self, folder_paths: List[str], index_pages: Optional[Dict[str, str]] = None) -> None:
+    def index_folders(
+        self, folder_paths: List[str], index_pages: Optional[Dict[str, str]] = None
+    ) -> None:
         """Create folder nodes and hierarchy relationships.
 
         Args:
@@ -309,14 +348,14 @@ class GraphDB:
         all_folders = set()
         for path in folder_paths:
             # Add this folder and all parent folders
-            parts = path.split('/')
+            parts = path.split("/")
             for i in range(1, len(parts) + 1):
-                folder_path = '/'.join(parts[:i])
+                folder_path = "/".join(parts[:i])
                 all_folders.add(folder_path)
 
         # Create folder nodes
         for folder_path in all_folders:
-            name = folder_path.split('/')[-1]
+            name = folder_path.split("/")[-1]
             has_index = folder_path in index_pages
 
             folder_query = """
@@ -324,28 +363,29 @@ class GraphDB:
             SET f.name = $name,
                 f.has_index_page = $has_index
             """
-            conn.execute(folder_query, {
-                "path": folder_path,
-                "name": name,
-                "has_index": has_index
-            })
+            conn.execute(
+                folder_query,
+                {"path": folder_path, "name": name, "has_index": has_index},
+            )
 
         # Create CONTAINS relationships for parent-child folders
         for folder_path in all_folders:
-            if '/' in folder_path:
-                parent_path = '/'.join(folder_path.split('/')[:-1])
+            if "/" in folder_path:
+                parent_path = "/".join(folder_path.split("/")[:-1])
                 if parent_path in all_folders:
                     contains_query = """
                     MATCH (parent:Folder {path: $parent_path})
                     MATCH (child:Folder {path: $child_path})
                     MERGE (parent)-[:CONTAINS]->(child)
                     """
-                    conn.execute(contains_query, {
-                        "parent_path": parent_path,
-                        "child_path": folder_path
-                    })
+                    conn.execute(
+                        contains_query,
+                        {"parent_path": parent_path, "child_path": folder_path},
+                    )
 
-    def cypher_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def cypher_query(
+        self, query: str, params: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
         """Execute a Cypher query.
 
         Args:
@@ -436,7 +476,9 @@ class GraphDB:
         """
         conn.execute(cleanup_data_query)
 
-    def keyword_search(self, keyword: str, scope: Optional[str] = None) -> List[Dict[str, Any]]:
+    def keyword_search(
+        self, keyword: str, scope: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """Search for chunks by keyword with BM25 ranking.
 
         Implements BM25 scoring with:
@@ -463,10 +505,9 @@ class GraphDB:
             WHERE f.path = $scope OR f.path STARTS WITH $scope_prefix
             RETURN count(c) as total
             """
-            total_result = conn.execute(total_docs_query, {
-                "scope": scope,
-                "scope_prefix": scope + "/"
-            })
+            total_result = conn.execute(
+                total_docs_query, {"scope": scope, "scope_prefix": scope + "/"}
+            )
         else:
             total_docs_query = "MATCH (c:Chunk) RETURN count(c) as total"
             total_result = conn.execute(total_docs_query)
@@ -483,10 +524,29 @@ class GraphDB:
 
         # Technical terms that get boosted (common in developer documentation)
         technical_terms = {
-            'sql', 'nosql', 'api', 'rest', 'graphql', 'json', 'xml',
-            'index', 'indexes', 'query', 'queries', 'schema', 'migration',
-            'optimization', 'performance', 'cache', 'caching', 'async',
-            'database', 'db', 'repository', 'orm', 'transaction'
+            "sql",
+            "nosql",
+            "api",
+            "rest",
+            "graphql",
+            "json",
+            "xml",
+            "index",
+            "indexes",
+            "query",
+            "queries",
+            "schema",
+            "migration",
+            "optimization",
+            "performance",
+            "cache",
+            "caching",
+            "async",
+            "database",
+            "db",
+            "repository",
+            "orm",
+            "transaction",
         }
 
         # Build scope filter clause if scope is specified
@@ -507,18 +567,28 @@ class GraphDB:
                 param_name = "term" + str(i)
                 # Build WHERE clause without f-strings (concatenate strings instead)
                 where_clause = (
-                    "(toLower(c.content) CONTAINS $" + param_name +
-                    " OR toLower(c.file_path) CONTAINS $" + param_name +
-                    " OR toLower(c.header) CONTAINS $" + param_name + ")"
+                    "(toLower(c.content) CONTAINS $"
+                    + param_name
+                    + " OR toLower(c.file_path) CONTAINS $"
+                    + param_name
+                    + " OR toLower(c.header) CONTAINS $"
+                    + param_name
+                    + ")"
                 )
                 where_clauses.append(where_clause)
                 params[param_name] = term
 
             # Build query without f-strings (concatenate strings instead)
             search_query = (
-                "MATCH (c:Chunk)" + scope_match + " " +
-                "WHERE (" + " OR ".join(where_clauses) + ")" + scope_where + " " +
-                "RETURN c"
+                "MATCH (c:Chunk)"
+                + scope_match
+                + " "
+                + "WHERE ("
+                + " OR ".join(where_clauses)
+                + ")"
+                + scope_where
+                + " "
+                + "RETURN c"
             )
             result = conn.execute(search_query, params)
         else:
@@ -526,11 +596,15 @@ class GraphDB:
             params = {"keyword": keyword}
             params.update(scope_params)
             search_query = (
-                "MATCH (c:Chunk)" + scope_match + " " +
-                "WHERE (c.content CONTAINS $keyword " +
-                "   OR c.file_path CONTAINS $keyword " +
-                "   OR c.header CONTAINS $keyword)" + scope_where + " " +
-                "RETURN c"
+                "MATCH (c:Chunk)"
+                + scope_match
+                + " "
+                + "WHERE (c.content CONTAINS $keyword "
+                + "   OR c.file_path CONTAINS $keyword "
+                + "   OR c.header CONTAINS $keyword)"
+                + scope_where
+                + " "
+                + "RETURN c"
             )
             result = conn.execute(search_query, params)
 
@@ -565,18 +639,18 @@ class GraphDB:
         b = 0.75  # Length normalization parameter
 
         # Calculate average document length
-        avg_doc_length = sum(len(c.get('content', '')) for c in chunks) / len(chunks)
+        avg_doc_length = sum(len(c.get("content", "")) for c in chunks) / len(chunks)
 
         # Score each chunk using BM25
         scored_chunks = []
         for chunk in chunks:
-            content = chunk.get('content', '').lower()
-            file_path = chunk.get('file_path', '').lower()
-            header = chunk.get('header', '').lower()
-            doc_length = len(chunk.get('content', ''))
+            content = chunk.get("content", "").lower()
+            file_path = chunk.get("file_path", "").lower()
+            header = chunk.get("header", "").lower()
+            doc_length = len(chunk.get("content", ""))
 
             # Get tags for this chunk to apply tag boosting
-            chunk_id = chunk.get('id', '')
+            chunk_id = chunk.get("id", "")
             tags_query = """
             MATCH (c:Chunk {id: $chunk_id})-[:TAGGED]->(t:Tag)
             RETURN t.name as tag
@@ -593,7 +667,7 @@ class GraphDB:
                 # Calculate term frequency in document (with boosting)
                 tf = content.count(term)
                 tf += file_path.count(term) * 1.5  # Boost matches in file path
-                tf += header.count(term) * 2.0      # Boost matches in headers
+                tf += header.count(term) * 2.0  # Boost matches in headers
 
                 # Tag boosting: 2x weight if term appears in tags
                 if term in chunk_tags:
@@ -621,10 +695,7 @@ class GraphDB:
 
                 bm25_score += idf * normalized_tf
 
-            scored_chunks.append({
-                "col0": chunk,
-                "bm25_score": round(bm25_score, 4)
-            })
+            scored_chunks.append({"col0": chunk, "bm25_score": round(bm25_score, 4)})
 
         # Sort by BM25 score (descending)
         scored_chunks.sort(key=lambda x: x["bm25_score"], reverse=True)
@@ -638,7 +709,7 @@ class GraphDB:
         limit: int = 10,
         filter_tags: Optional[List[str]] = None,
         filter_pages: Optional[List[str]] = None,
-        scope: Optional[str] = None
+        scope: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Perform semantic search using vector similarity.
 
@@ -675,10 +746,13 @@ class GraphDB:
             """
 
             # Get vector search results
-            vector_results = conn.execute(base_query, {
-                "query_embedding": query_embedding,
-                "limit": limit * 2  # Get more candidates for filtering
-            })
+            vector_results = conn.execute(
+                base_query,
+                {
+                    "query_embedding": query_embedding,
+                    "limit": limit * 2,  # Get more candidates for filtering
+                },
+            )
 
             # Extract chunk IDs from vector results
             chunk_ids = []
@@ -692,29 +766,40 @@ class GraphDB:
             # Build Cypher filter query
             filter_conditions = []
             if filter_tags:
-                filter_conditions.append("EXISTS((c)-[:TAGGED]->(:Tag)) AND ANY(t IN $tags WHERE (c)-[:TAGGED]->(:Tag {name: t}))")
+                filter_conditions.append(
+                    "EXISTS((c)-[:TAGGED]->(:Tag)) AND ANY(t IN $tags WHERE (c)-[:TAGGED]->(:Tag {name: t}))"
+                )
             if filter_pages:
                 filter_conditions.append("c.file_path IN $pages")
             if scope:
-                filter_conditions.append("EXISTS((c)-[:IN_FOLDER]->(f:Folder) WHERE f.path = $scope OR f.path STARTS WITH $scope_prefix)")
+                filter_conditions.append(
+                    "EXISTS((c)-[:IN_FOLDER]->(f:Folder) WHERE f.path = $scope OR f.path STARTS WITH $scope_prefix)"
+                )
 
-            filter_clause = " AND ".join(filter_conditions) if filter_conditions else "TRUE"
-
-            filtered_query = (
-                "MATCH (c:Chunk) " +
-                "WHERE c.id IN $chunk_ids AND " + filter_clause + " " +
-                "RETURN c " +
-                "LIMIT $limit"
+            filter_clause = (
+                " AND ".join(filter_conditions) if filter_conditions else "TRUE"
             )
 
-            result = conn.execute(filtered_query, {
-                "chunk_ids": chunk_ids,
-                "tags": filter_tags or [],
-                "pages": filter_pages or [],
-                "scope": scope or "",
-                "scope_prefix": (scope + "/") if scope else "",
-                "limit": limit
-            })
+            filtered_query = (
+                "MATCH (c:Chunk) "
+                + "WHERE c.id IN $chunk_ids AND "
+                + filter_clause
+                + " "
+                + "RETURN c "
+                + "LIMIT $limit"
+            )
+
+            result = conn.execute(
+                filtered_query,
+                {
+                    "chunk_ids": chunk_ids,
+                    "tags": filter_tags or [],
+                    "pages": filter_pages or [],
+                    "scope": scope or "",
+                    "scope_prefix": (scope + "/") if scope else "",
+                    "limit": limit,
+                },
+            )
         else:
             # Simple vector search without filters
             vector_query = """
@@ -723,10 +808,9 @@ class GraphDB:
             LIMIT $limit
             """
 
-            result = conn.execute(vector_query, {
-                "query_embedding": query_embedding,
-                "limit": limit
-            })
+            result = conn.execute(
+                vector_query, {"query_embedding": query_embedding, "limit": limit}
+            )
 
         # Process results
         records = []
@@ -752,4 +836,3 @@ class GraphDB:
         # LadybugDB values are already Python-compatible
         # Add any necessary conversions here
         return value
-

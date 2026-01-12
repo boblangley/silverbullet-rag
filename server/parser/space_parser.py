@@ -54,7 +54,7 @@ class SpaceParser:
     """Parser for Silverbullet markdown space."""
 
     # Regex to match YAML frontmatter block
-    FRONTMATTER_PATTERN = re.compile(r'^---\s*\n(.*?)\n---\s*\n', re.DOTALL)
+    FRONTMATTER_PATTERN = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
     def __init__(self, space_root: Optional[str] = None):
         """Initialize the parser.
@@ -65,19 +65,23 @@ class SpaceParser:
         self.md = MarkdownIt()
         self.space_root = Path(space_root).resolve() if space_root else None
         # Wikilinks: [[page]] or [[page|alias]] or [[page#header]]
-        self.link_pattern = re.compile(r'\[\[([^\]]+)\]\]')
+        self.link_pattern = re.compile(r"\[\[([^\]]+)\]\]")
         # Hashtags: #tagname (but not inside code blocks or URLs)
-        self.tag_pattern = re.compile(r'(?<![`/])#(\w+)')
+        self.tag_pattern = re.compile(r"(?<![`/])#(\w+)")
         # Transclusions: ![[page]] or ![[page#header]]
-        self.transclusion_pattern = re.compile(r'!\[\[([^\]#]+)(?:#([^\]]+))?\]\]')
+        self.transclusion_pattern = re.compile(r"!\[\[([^\]#]+)(?:#([^\]]+))?\]\]")
         # Inline attributes: [name: value] (but not markdown links)
-        self.inline_attr_pattern = re.compile(r'(?<!!)\[([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*([^\]]+)\]')
+        self.inline_attr_pattern = re.compile(
+            r"(?<!!)\[([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*([^\]]+)\]"
+        )
         # Data blocks: ```#tagname followed by YAML content
-        self.data_block_pattern = re.compile(r'```#(\w+)\s*\n(.*?)\n```', re.DOTALL)
+        self.data_block_pattern = re.compile(r"```#(\w+)\s*\n(.*?)\n```", re.DOTALL)
         self._frontmatter_cache: Dict[str, Dict[str, Any]] = {}
         self._content_cache: Dict[str, str] = {}
 
-    def parse_space(self, dir_path: str, expand_transclusions: bool = True) -> List[Chunk]:
+    def parse_space(
+        self, dir_path: str, expand_transclusions: bool = True
+    ) -> List[Chunk]:
         """Parse all markdown files in a directory.
 
         Args:
@@ -94,13 +98,15 @@ class SpaceParser:
         # First pass: cache all file contents for transclusion resolution
         for md_file in space_path.glob("**/*.md"):
             try:
-                with open(md_file, 'r', encoding='utf-8') as f:
+                with open(md_file, "r", encoding="utf-8") as f:
                     content = f.read()
                 # Cache by page name (relative path without .md extension)
                 relative_path = md_file.relative_to(space_path)
-                page_name = str(relative_path.with_suffix(''))
+                page_name = str(relative_path.with_suffix(""))
                 self._content_cache[page_name] = content
-                self._frontmatter_cache[str(md_file)] = self._extract_frontmatter(content)
+                self._frontmatter_cache[str(md_file)] = self._extract_frontmatter(
+                    content
+                )
             except Exception as e:
                 print(f"Error caching {md_file}: {e}")
 
@@ -108,16 +114,19 @@ class SpaceParser:
         for md_file in space_path.glob("**/*.md"):
             try:
                 content = self._content_cache.get(
-                    str(md_file.relative_to(space_path).with_suffix('')),
-                    ''
+                    str(md_file.relative_to(space_path).with_suffix("")), ""
                 )
                 if not content:
-                    with open(md_file, 'r', encoding='utf-8') as f:
+                    with open(md_file, "r", encoding="utf-8") as f:
                         content = f.read()
 
                 # Calculate folder path relative to space root
                 relative_path = md_file.relative_to(space_path)
-                folder_path = str(relative_path.parent) if relative_path.parent != Path('.') else ""
+                folder_path = (
+                    str(relative_path.parent)
+                    if relative_path.parent != Path(".")
+                    else ""
+                )
 
                 # Extract frontmatter
                 frontmatter = self._frontmatter_cache.get(str(md_file), {})
@@ -128,7 +137,7 @@ class SpaceParser:
                     content,
                     folder_path=folder_path,
                     frontmatter=frontmatter,
-                    expand_transclusions=expand_transclusions
+                    expand_transclusions=expand_transclusions,
                 )
                 chunks.extend(file_chunks)
             except Exception as e:
@@ -142,7 +151,7 @@ class SpaceParser:
         content: str,
         folder_path: str = "",
         frontmatter: Optional[Dict[str, Any]] = None,
-        expand_transclusions: bool = True
+        expand_transclusions: bool = True,
     ) -> List[Chunk]:
         """Parse a single markdown file into chunks.
 
@@ -179,31 +188,33 @@ class SpaceParser:
         current_content: List[str] = []
 
         for token in tokens:
-            if token.type == 'heading_open' and token.tag == 'h2':
+            if token.type == "heading_open" and token.tag == "h2":
                 # Save previous chunk if exists
                 if current_content:
-                    chunk_text = '\n'.join(current_content).strip()
+                    chunk_text = "\n".join(current_content).strip()
                     if chunk_text:
-                        chunks.append(self._create_chunk(
-                            file_path,
-                            current_header,
-                            chunk_text,
-                            folder_path=folder_path,
-                            frontmatter=frontmatter,
-                            raw_content=raw_content
-                        ))
+                        chunks.append(
+                            self._create_chunk(
+                                file_path,
+                                current_header,
+                                chunk_text,
+                                folder_path=folder_path,
+                                frontmatter=frontmatter,
+                                raw_content=raw_content,
+                            )
+                        )
                     current_content = []
 
-            elif token.type == 'inline':
+            elif token.type == "inline":
                 # Extract heading text
                 if token.content:
                     # Check if this is heading content
-                    parent_open = [t for t in tokens if t.type == 'heading_open']
+                    parent_open = [t for t in tokens if t.type == "heading_open"]
                     if parent_open:
                         current_header = token.content
                     current_content.append(token.content)
 
-            elif token.type in ('paragraph_open', 'list_item_open', 'blockquote_open'):
+            elif token.type in ("paragraph_open", "list_item_open", "blockquote_open"):
                 # Collect content
                 pass
 
@@ -212,32 +223,40 @@ class SpaceParser:
 
         # Save last chunk
         if current_content:
-            chunk_text = '\n'.join(current_content).strip()
+            chunk_text = "\n".join(current_content).strip()
             if chunk_text:
-                chunks.append(self._create_chunk(
-                    file_path,
-                    current_header,
-                    chunk_text,
-                    folder_path=folder_path,
-                    frontmatter=frontmatter,
-                    raw_content=raw_content
-                ))
+                chunks.append(
+                    self._create_chunk(
+                        file_path,
+                        current_header,
+                        chunk_text,
+                        folder_path=folder_path,
+                        frontmatter=frontmatter,
+                        raw_content=raw_content,
+                    )
+                )
 
         # If no chunks were created (e.g., file has no content after parsing),
         # still record file-level data blocks in an empty chunk
         if not chunks and file_data_blocks:
-            chunks.append(Chunk(
-                file_path=file_path,
-                header=Path(file_path).stem,
-                content="",
-                links=[],
-                tags=list(frontmatter.get('tags', [])) if isinstance(frontmatter.get('tags'), list) else [],
-                folder_path=folder_path,
-                frontmatter=frontmatter,
-                transclusions=[],
-                inline_attributes=[],
-                data_blocks=file_data_blocks
-            ))
+            chunks.append(
+                Chunk(
+                    file_path=file_path,
+                    header=Path(file_path).stem,
+                    content="",
+                    links=[],
+                    tags=(
+                        list(frontmatter.get("tags", []))
+                        if isinstance(frontmatter.get("tags"), list)
+                        else []
+                    ),
+                    folder_path=folder_path,
+                    frontmatter=frontmatter,
+                    transclusions=[],
+                    inline_attributes=[],
+                    data_blocks=file_data_blocks,
+                )
+            )
         elif chunks:
             # Associate file-level data blocks with the first chunk
             chunks[0].data_blocks.extend(file_data_blocks)
@@ -251,7 +270,7 @@ class SpaceParser:
         content: str,
         folder_path: str = "",
         frontmatter: Optional[Dict[str, Any]] = None,
-        raw_content: Optional[str] = None
+        raw_content: Optional[str] = None,
     ) -> Chunk:
         """Create a chunk with extracted links, tags, transclusions, and attributes.
 
@@ -275,7 +294,7 @@ class SpaceParser:
 
         # Collect tags from both #hashtags in content and frontmatter tags property
         content_tags = self.tag_pattern.findall(content)
-        frontmatter_tags = frontmatter.get('tags', [])
+        frontmatter_tags = frontmatter.get("tags", [])
 
         # Normalize frontmatter tags (could be a single string or list)
         if isinstance(frontmatter_tags, str):
@@ -308,7 +327,7 @@ class SpaceParser:
             frontmatter=frontmatter,
             transclusions=transclusions,
             inline_attributes=inline_attributes,
-            data_blocks=[]  # Will be populated by _parse_file
+            data_blocks=[],  # Will be populated by _parse_file
         )
 
     def _extract_frontmatter(self, content: str) -> Dict[str, Any]:
@@ -337,7 +356,7 @@ class SpaceParser:
         Returns:
             Content with frontmatter block removed
         """
-        return self.FRONTMATTER_PATTERN.sub('', content)
+        return self.FRONTMATTER_PATTERN.sub("", content)
 
     def _extract_transclusions(self, content: str) -> List[Transclusion]:
         """Extract transclusion references from content.
@@ -352,10 +371,9 @@ class SpaceParser:
         for match in self.transclusion_pattern.finditer(content):
             target_page = match.group(1).strip()
             target_header = match.group(2).strip() if match.group(2) else None
-            transclusions.append(Transclusion(
-                target_page=target_page,
-                target_header=target_header
-            ))
+            transclusions.append(
+                Transclusion(target_page=target_page, target_header=target_header)
+            )
         return transclusions
 
     def _extract_inline_attributes(self, content: str) -> List[InlineAttribute]:
@@ -391,17 +409,17 @@ class SpaceParser:
             try:
                 data = yaml.safe_load(yaml_content) or {}
                 if isinstance(data, dict):
-                    data_blocks.append(DataBlock(
-                        tag=tag,
-                        data=data,
-                        file_path=file_path
-                    ))
+                    data_blocks.append(
+                        DataBlock(tag=tag, data=data, file_path=file_path)
+                    )
             except yaml.YAMLError:
                 # Skip malformed YAML blocks
                 pass
         return data_blocks
 
-    def _expand_transclusions(self, content: str, depth: int = 0, max_depth: int = 5) -> str:
+    def _expand_transclusions(
+        self, content: str, depth: int = 0, max_depth: int = 5
+    ) -> str:
         """Expand transclusion references by inlining the target content.
 
         Args:
@@ -420,11 +438,14 @@ class SpaceParser:
             target_header = match.group(2).strip() if match.group(2) else None
 
             # Look up the target content in cache
-            target_content = self._content_cache.get(target_page, '')
+            target_content = self._content_cache.get(target_page, "")
             if not target_content:
                 # Try with path variations (e.g., folder/page vs page)
                 for cached_page in self._content_cache:
-                    if cached_page.endswith('/' + target_page) or cached_page == target_page:
+                    if (
+                        cached_page.endswith("/" + target_page)
+                        or cached_page == target_page
+                    ):
                         target_content = self._content_cache[cached_page]
                         break
 
@@ -440,7 +461,9 @@ class SpaceParser:
                 target_content = self._extract_section(target_content, target_header)
 
             # Recursively expand transclusions in the included content
-            target_content = self._expand_transclusions(target_content, depth + 1, max_depth)
+            target_content = self._expand_transclusions(
+                target_content, depth + 1, max_depth
+            )
 
             return target_content
 
@@ -456,14 +479,14 @@ class SpaceParser:
         Returns:
             Content from the header to the next same-level or higher header
         """
-        lines = content.split('\n')
+        lines = content.split("\n")
         in_section = False
         section_lines = []
         section_level = 0
 
         for line in lines:
             # Check if this is a header line
-            header_match = re.match(r'^(#+)\s+(.+)$', line)
+            header_match = re.match(r"^(#+)\s+(.+)$", line)
             if header_match:
                 level = len(header_match.group(1))
                 header_text = header_match.group(2).strip()
@@ -480,7 +503,7 @@ class SpaceParser:
             elif in_section:
                 section_lines.append(line)
 
-        return '\n'.join(section_lines)
+        return "\n".join(section_lines)
 
     def get_frontmatter(self, file_path: str) -> Dict[str, Any]:
         """Get cached frontmatter for a file, or parse it.
@@ -496,7 +519,7 @@ class SpaceParser:
 
         # Parse if not cached
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
             frontmatter = self._extract_frontmatter(content)
             self._frontmatter_cache[file_path] = frontmatter
@@ -521,12 +544,12 @@ class SpaceParser:
 
             # Add all parent folders
             current = relative_path.parent
-            while current != Path('.'):
+            while current != Path("."):
                 folders.add(str(current))
                 current = current.parent
 
         # Also add any directories that exist (even without .md files)
-        for item in space_path.rglob('*'):
+        for item in space_path.rglob("*"):
             if item.is_dir():
                 relative = item.relative_to(space_path)
                 folders.add(str(relative))
@@ -548,7 +571,7 @@ class SpaceParser:
         index_map = {}
         space_path = Path(dir_path).resolve()
 
-        for folder in space_path.rglob('*'):
+        for folder in space_path.rglob("*"):
             if folder.is_dir():
                 relative_folder = folder.relative_to(space_path)
                 # Check for sibling .md file with same name as folder

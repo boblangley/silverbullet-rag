@@ -42,6 +42,7 @@ class OpenAIProvider(BaseEmbeddingProvider):
 
     def __init__(self, api_key: str, model: str = "text-embedding-3-small"):
         from openai import OpenAI
+
         self.client = OpenAI(api_key=api_key)
         self.model = model
         self._dimension = 1536  # Default for text-embedding-3-small
@@ -95,7 +96,7 @@ class EmbeddingService:
         self,
         provider: Optional[EmbeddingProvider] = None,
         api_key: Optional[str] = None,
-        model: Optional[str] = None
+        model: Optional[str] = None,
     ):
         """
         Initialize the embedding service.
@@ -128,7 +129,9 @@ class EmbeddingService:
             raise ValueError(f"Unknown embedding provider: {provider}")
 
         self.model = model
-        logger.info(f"Initialized EmbeddingService with provider: {provider}, model: {model}")
+        logger.info(
+            f"Initialized EmbeddingService with provider: {provider}, model: {model}"
+        )
 
     def clean_content(self, text: str) -> str:
         """
@@ -147,22 +150,24 @@ class EmbeddingService:
             Cleaned text suitable for embedding
         """
         # Remove front matter delimiters
-        text = re.sub(r'^---\s*$', '', text, flags=re.MULTILINE)
+        text = re.sub(r"^---\s*$", "", text, flags=re.MULTILINE)
 
         # Convert wikilinks to plain text (keep the display text)
         # [[page|alias]] -> alias
         # [[page]] -> page
-        text = re.sub(r'\[\[([^\]|]+)\|([^\]]+)\]\]', r'\2', text)
-        text = re.sub(r'\[\[([^\]]+)\]\]', r'\1', text)
+        text = re.sub(r"\[\[([^\]|]+)\|([^\]]+)\]\]", r"\2", text)
+        text = re.sub(r"\[\[([^\]]+)\]\]", r"\1", text)
 
         # Remove Silverbullet attributes (tags, mentions, etc.)
         # Keep the text but remove the special syntax
-        text = re.sub(r'#(\w+)', r'\1', text)  # #tag -> tag
-        text = re.sub(r'@(\w+)', r'\1', text)  # @mention -> mention
+        text = re.sub(r"#(\w+)", r"\1", text)  # #tag -> tag
+        text = re.sub(r"@(\w+)", r"\1", text)  # @mention -> mention
 
         # Remove excessive whitespace
-        text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)  # Multiple newlines -> double newline
-        text = re.sub(r' +', ' ', text)  # Multiple spaces -> single space
+        text = re.sub(
+            r"\n\s*\n\s*\n+", "\n\n", text
+        )  # Multiple newlines -> double newline
+        text = re.sub(r" +", " ", text)  # Multiple spaces -> single space
         text = text.strip()
 
         return text
@@ -194,9 +199,7 @@ class EmbeddingService:
             raise
 
     def generate_embeddings_batch(
-        self,
-        texts: List[str],
-        clean: bool = True
+        self, texts: List[str], clean: bool = True
     ) -> List[List[float]]:
         """
         Generate embeddings for multiple texts in a batch.

@@ -11,7 +11,9 @@ class TestSemanticSearch:
     """Tests for semantic search in GraphDB."""
 
     @patch("server.db.graph.EmbeddingService")
-    def test_graphdb_initialization_with_embeddings(self, mock_embedding_service, temp_db_path):
+    def test_graphdb_initialization_with_embeddings(
+        self, mock_embedding_service, temp_db_path
+    ):
         """Test that GraphDB initializes with embeddings enabled."""
         db = GraphDB(temp_db_path, enable_embeddings=True)
         assert db.enable_embeddings is True
@@ -25,7 +27,9 @@ class TestSemanticSearch:
         assert db.embedding_service is None
 
     @patch("server.db.graph.EmbeddingService")
-    def test_semantic_search_disabled_raises_error(self, mock_embedding_service, temp_db_path):
+    def test_semantic_search_disabled_raises_error(
+        self, mock_embedding_service, temp_db_path
+    ):
         """Test that semantic_search raises error when embeddings disabled."""
         db = GraphDB(temp_db_path, enable_embeddings=False)
 
@@ -132,7 +136,9 @@ class TestSemanticSearch:
         mock_connection.return_value = mock_conn_instance
 
         db = GraphDB(temp_db_path, enable_embeddings=True)
-        db.semantic_search("test query", limit=10, filter_pages=["page1.md", "page2.md"])
+        db.semantic_search(
+            "test query", limit=10, filter_pages=["page1.md", "page2.md"]
+        )
 
         # Verify that execute was called
         assert mock_conn_instance.execute.call_count >= 1
@@ -157,7 +163,7 @@ class TestSemanticSearch:
         mock_result.has_next.side_effect = [True, True, False]
         mock_result.get_next.side_effect = [
             ["chunk1", "content1"],
-            ["chunk2", "content2"]
+            ["chunk2", "content2"],
         ]
         mock_conn_instance.execute.return_value = mock_result
         mock_connection.return_value = mock_conn_instance
@@ -170,7 +176,9 @@ class TestSemanticSearch:
         assert "col1" in results[0]
 
     @patch("server.db.graph.EmbeddingService")
-    def test_index_chunks_generates_embeddings(self, mock_embedding_service, temp_db_path):
+    def test_index_chunks_generates_embeddings(
+        self, mock_embedding_service, temp_db_path
+    ):
         """Test that index_chunks generates embeddings when enabled."""
         # Setup mock
         mock_service_instance = MagicMock()
@@ -187,15 +195,15 @@ class TestSemanticSearch:
                 header="Section 1",
                 content="Content 1",
                 links=["link1"],
-                tags=["tag1"]
+                tags=["tag1"],
             ),
             Chunk(
                 file_path="test2.md",
                 header="Section 2",
                 content="Content 2",
                 links=["link2"],
-                tags=["tag2"]
-            )
+                tags=["tag2"],
+            ),
         ]
 
         db.index_chunks(chunks)
@@ -206,7 +214,9 @@ class TestSemanticSearch:
         assert call_args[0][0] == ["Content 1", "Content 2"]
 
     @patch("server.db.graph.EmbeddingService")
-    def test_index_chunks_without_embeddings(self, mock_embedding_service, temp_db_path):
+    def test_index_chunks_without_embeddings(
+        self, mock_embedding_service, temp_db_path
+    ):
         """Test that index_chunks works without embeddings."""
         db = GraphDB(temp_db_path, enable_embeddings=False)
 
@@ -216,7 +226,7 @@ class TestSemanticSearch:
                 header="Section",
                 content="Content",
                 links=[],
-                tags=[]
+                tags=[],
             )
         ]
 
@@ -310,10 +320,7 @@ class TestSemanticSearch:
         mock_conn_instance.execute.side_effect = [mock_result1, mock_result2]
 
         results = db.semantic_search(
-            "test query",
-            limit=5,
-            filter_tags=["tag1"],
-            filter_pages=["page1.md"]
+            "test query", limit=5, filter_tags=["tag1"], filter_pages=["page1.md"]
         )
 
         # Results should be returned
@@ -324,7 +331,9 @@ class TestSemanticSearchIntegration:
     """Integration tests for semantic search with real data."""
 
     @pytest.mark.skip(reason="Requires real LadybugDB and OpenAI API")
-    def test_semantic_search_with_silverbullet_data(self, temp_db_path, silverbullet_test_data):
+    def test_semantic_search_with_silverbullet_data(
+        self, temp_db_path, silverbullet_test_data
+    ):
         """Test semantic search with real Silverbullet markdown data.
 
         This test is skipped by default as it requires:

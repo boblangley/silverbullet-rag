@@ -18,6 +18,7 @@ class Pipe:
 
     class Valves(BaseModel):
         """Configuration valves for the pipe."""
+
         DB_PATH: str = "/db"
         SPACE_PATH: str = "/space"
         MAX_RESULTS: int = 5
@@ -69,7 +70,7 @@ class Pipe:
         for keyword in keywords[:3]:  # Limit to top 3 keywords
             try:
                 results = self.graph_db.keyword_search(keyword)
-                context_chunks.extend(results[:self.valves.MAX_RESULTS])
+                context_chunks.extend(results[: self.valves.MAX_RESULTS])
             except Exception as e:
                 print(f"Search error for '{keyword}': {e}")
 
@@ -86,7 +87,7 @@ class Pipe:
 
 {context_text}
 
-Use this information to provide more informed and personalized responses. Reference specific pages or notes when relevant."""
+Use this information to provide more informed and personalized responses. Reference specific pages or notes when relevant.""",
         }
 
         # Insert system message before the last user message
@@ -106,18 +107,69 @@ Use this information to provide more informed and personalized responses. Refere
         """
         # Simple word extraction - filter common words
         stopwords = {
-            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to',
-            'for', 'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are',
-            'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did',
-            'will', 'would', 'could', 'should', 'may', 'might', 'can', 'what',
-            'when', 'where', 'who', 'why', 'how', 'this', 'that', 'these',
-            'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him',
-            'her', 'us', 'them'
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "with",
+            "by",
+            "from",
+            "as",
+            "is",
+            "was",
+            "are",
+            "were",
+            "been",
+            "be",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "could",
+            "should",
+            "may",
+            "might",
+            "can",
+            "what",
+            "when",
+            "where",
+            "who",
+            "why",
+            "how",
+            "this",
+            "that",
+            "these",
+            "those",
+            "i",
+            "you",
+            "he",
+            "she",
+            "it",
+            "we",
+            "they",
+            "me",
+            "him",
+            "her",
+            "us",
+            "them",
         }
 
         words = text.lower().split()
         keywords = [
-            word.strip('.,!?;:') for word in words
+            word.strip(".,!?;:")
+            for word in words
             if len(word) > 3 and word.lower() not in stopwords
         ]
 
@@ -140,21 +192,21 @@ Use this information to provide more informed and personalized responses. Refere
 
         for chunk in chunks:
             # Extract relevant fields (depends on cypher query result structure)
-            content = chunk.get('content', chunk.get('col0', ''))
+            content = chunk.get("content", chunk.get("col0", ""))
             if isinstance(content, dict):
-                content = content.get('content', str(content))
+                content = content.get("content", str(content))
 
-            header = chunk.get('header', chunk.get('col1', 'Unknown'))
+            header = chunk.get("header", chunk.get("col1", "Unknown"))
             if isinstance(header, dict):
-                header = header.get('header', str(header))
+                header = header.get("header", str(header))
 
-            file_path = chunk.get('file_path', chunk.get('col2', ''))
+            file_path = chunk.get("file_path", chunk.get("col2", ""))
             if isinstance(file_path, dict):
-                file_path = file_path.get('file_path', str(file_path))
+                file_path = file_path.get("file_path", str(file_path))
 
             source = f"{file_path}#{header}"
             if source not in seen_sources:
                 seen_sources.add(source)
                 context_parts.append(f"## {header}\n{content}\n\nSource: {file_path}")
 
-        return "\n\n---\n\n".join(context_parts[:self.valves.MAX_RESULTS])
+        return "\n\n---\n\n".join(context_parts[: self.valves.MAX_RESULTS])

@@ -74,7 +74,8 @@ class TestTransclusionParsing:
         page_a = tmp_path / "PageA.md"
         page_b = tmp_path / "PageB.md"
 
-        page_b.write_text("""# PageB
+        page_b.write_text(
+            """# PageB
 
 ## Section One
 Content of section one.
@@ -84,7 +85,8 @@ Content of section two.
 
 ## Section Three
 Content of section three.
-""")
+"""
+        )
         page_a.write_text("Include: ![[PageB#Section Two]]")
 
         parser = SpaceParser(str(tmp_path))
@@ -177,14 +179,14 @@ class TestDataBlockParsing:
     def test_extract_simple_data_block(self):
         """Test extraction of simple data block."""
         parser = SpaceParser()
-        content = '''Some text
+        content = """Some text
 
 ```#person
 name: John Doe
 age: 30
 ```
 
-More text'''
+More text"""
         data_blocks = parser._extract_data_blocks(content, "/test/file.md")
 
         assert len(data_blocks) == 1
@@ -196,7 +198,7 @@ More text'''
     def test_extract_multiple_data_blocks(self):
         """Test extraction of multiple data blocks."""
         parser = SpaceParser()
-        content = '''
+        content = """
 ```#contact
 name: Alice
 email: alice@example.com
@@ -208,7 +210,7 @@ Some text between
 name: Bob
 email: bob@example.com
 ```
-'''
+"""
         data_blocks = parser._extract_data_blocks(content, "/test/file.md")
 
         assert len(data_blocks) == 2
@@ -218,14 +220,14 @@ email: bob@example.com
     def test_data_block_with_nested_yaml(self):
         """Test data block with nested YAML structure."""
         parser = SpaceParser()
-        content = '''
+        content = """
 ```#project
 name: My Project
 metadata:
   version: "1.0"
   status: active
 ```
-'''
+"""
         data_blocks = parser._extract_data_blocks(content, "/test/file.md")
 
         assert len(data_blocks) == 1
@@ -235,13 +237,13 @@ metadata:
     def test_invalid_yaml_skipped(self):
         """Test that invalid YAML blocks are skipped."""
         parser = SpaceParser()
-        content = '''
+        content = """
 ```#invalid
 this: is: not: valid: yaml:
   - broken
     indentation
 ```
-'''
+"""
         data_blocks = parser._extract_data_blocks(content, "/test/file.md")
         # Should be empty due to YAML parse error
         assert len(data_blocks) == 0
@@ -249,12 +251,12 @@ this: is: not: valid: yaml:
     def test_regular_code_block_not_parsed(self):
         """Test that regular code blocks without # tag are not parsed."""
         parser = SpaceParser()
-        content = '''
+        content = """
 ```python
 def hello():
     print("Hello")
 ```
-'''
+"""
         data_blocks = parser._extract_data_blocks(content, "/test/file.md")
         assert len(data_blocks) == 0
 
@@ -289,13 +291,15 @@ class TestChunkWithNewFeatures:
     def test_chunk_has_data_blocks(self, tmp_path):
         """Test that parsed chunks contain data block data."""
         page = tmp_path / "test.md"
-        page.write_text('''
+        page.write_text(
+            """
 # Test Page
 
 ```#metadata
 key: value
 ```
-''')
+"""
+        )
 
         parser = SpaceParser(str(tmp_path))
         chunks = parser.parse_space(str(tmp_path))

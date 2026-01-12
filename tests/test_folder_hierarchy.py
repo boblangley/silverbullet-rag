@@ -38,18 +38,23 @@ class TestFolderNodesInGraph:
             db = GraphDB(temp_db_path, enable_embeddings=False)
 
             # Manually create a folder node to test schema
-            db.cypher_query("""
+            db.cypher_query(
+                """
                 CREATE (f:Folder {
                     name: $name,
                     path: $path,
                     has_index_page: $has_index
                 })
-            """, {"name": "Projects", "path": "Projects", "has_index": True})
+            """,
+                {"name": "Projects", "path": "Projects", "has_index": True},
+            )
 
-            result = db.cypher_query("""
+            result = db.cypher_query(
+                """
                 MATCH (f:Folder {name: 'Projects'})
                 RETURN f.name, f.path, f.has_index_page
-            """)
+            """
+            )
 
             assert len(result) == 1
             assert result[0]["col0"] == "Projects"
@@ -64,16 +69,20 @@ class TestFolderNodesInGraph:
             db = GraphDB(temp_db_path, enable_embeddings=False)
 
             # Create folder and page, then connect them
-            db.cypher_query("""
+            db.cypher_query(
+                """
                 CREATE (f:Folder {name: 'Projects', path: 'Projects'})
                 CREATE (p:Page {name: 'MyProject'})
                 CREATE (f)-[:FOLDER_CONTAINS_PAGE]->(p)
-            """)
+            """
+            )
 
-            result = db.cypher_query("""
+            result = db.cypher_query(
+                """
                 MATCH (f:Folder)-[:FOLDER_CONTAINS_PAGE]->(p:Page)
                 RETURN f.name, p.name
-            """)
+            """
+            )
 
             assert len(result) == 1
             assert result[0]["col0"] == "Projects"
@@ -87,16 +96,20 @@ class TestFolderNodesInGraph:
             db = GraphDB(temp_db_path, enable_embeddings=False)
 
             # Create nested folder structure
-            db.cypher_query("""
+            db.cypher_query(
+                """
                 CREATE (root:Folder {name: 'Projects', path: 'Projects'})
                 CREATE (sub:Folder {name: 'SubProject', path: 'Projects/SubProject'})
                 CREATE (root)-[:CONTAINS]->(sub)
-            """)
+            """
+            )
 
-            result = db.cypher_query("""
+            result = db.cypher_query(
+                """
                 MATCH (parent:Folder)-[:CONTAINS]->(child:Folder)
                 RETURN parent.name, child.name, child.path
-            """)
+            """
+            )
 
             assert len(result) == 1
             assert result[0]["col0"] == "Projects"
@@ -115,7 +128,7 @@ class TestFolderNodesInGraph:
                 "Projects",
                 "Projects/Topic",
                 "Projects/Topic/Silverbullet-RAG",
-                "Area/Health"
+                "Area/Health",
             ]
 
             db.index_folders(folder_paths)
@@ -139,10 +152,12 @@ class TestFolderNodesInGraph:
 
             db.index_folders(["Projects", "Projects/Topic"])
 
-            result = db.cypher_query("""
+            result = db.cypher_query(
+                """
                 MATCH (parent:Folder {name: 'Projects'})-[:CONTAINS]->(child:Folder {name: 'Topic'})
                 RETURN parent.path, child.path
-            """)
+            """
+            )
 
             assert len(result) == 1
             assert result[0]["col0"] == "Projects"
@@ -192,7 +207,9 @@ class TestFolderHierarchyParsing:
 
         # Create nested file
         Path(temp_space_path, "Projects").mkdir()
-        Path(temp_space_path, "Projects/MyProject.md").write_text("# My Project\n\nContent here")
+        Path(temp_space_path, "Projects/MyProject.md").write_text(
+            "# My Project\n\nContent here"
+        )
 
         parser = SpaceParser()
         chunks = parser.parse_space(temp_space_path)
@@ -200,7 +217,7 @@ class TestFolderHierarchyParsing:
         assert len(chunks) > 0
         # Chunks should have folder_path attribute
         chunk = chunks[0]
-        assert hasattr(chunk, 'folder_path')
+        assert hasattr(chunk, "folder_path")
         assert chunk.folder_path == "Projects"
 
 
@@ -273,7 +290,7 @@ Content for section 1.
 
         assert len(chunks) > 0
         chunk = chunks[0]
-        assert hasattr(chunk, 'frontmatter')
+        assert hasattr(chunk, "frontmatter")
         assert chunk.frontmatter.get("github") == "owner/repo"
 
     def test_frontmatter_not_included_in_chunk_content(self, temp_space_path):
@@ -371,7 +388,9 @@ class TestGetProjectContextTool:
     """Test the get_project_context MCP tool."""
 
     @pytest.mark.asyncio
-    async def test_get_project_context_by_github_remote(self, temp_space_path, monkeypatch):
+    async def test_get_project_context_by_github_remote(
+        self, temp_space_path, monkeypatch
+    ):
         """get_project_context should find context by github org/repo."""
         monkeypatch.setenv("SPACE_PATH", temp_space_path)
 
@@ -393,6 +412,7 @@ Run `npm install` to get started.
         # Initialize the space_parser global variable
         import server.mcp_http_server as mcp_module
         from server.parser.space_parser import SpaceParser
+
         mcp_module.space_parser = SpaceParser()
 
         from server.mcp_http_server import get_project_context
@@ -405,25 +425,30 @@ Run `npm install` to get started.
         assert "content" in result["project"]
 
     @pytest.mark.asyncio
-    async def test_get_project_context_by_folder_path(self, temp_space_path, monkeypatch):
+    async def test_get_project_context_by_folder_path(
+        self, temp_space_path, monkeypatch
+    ):
         """get_project_context should find context by folder path."""
         monkeypatch.setenv("SPACE_PATH", temp_space_path)
 
         # Create folder structure with index
         Path(temp_space_path, "Projects").mkdir()
         Path(temp_space_path, "Projects/MyProject").mkdir()
-        Path(temp_space_path, "Projects/MyProject.md").write_text("""---
+        Path(temp_space_path, "Projects/MyProject.md").write_text(
+            """---
 tags:
   - python
 ---
 # My Project
 
 Project documentation.
-""")
+"""
+        )
 
         # Initialize the space_parser global variable
         import server.mcp_http_server as mcp_module
         from server.parser.space_parser import SpaceParser
+
         mcp_module.space_parser = SpaceParser()
 
         from server.mcp_http_server import get_project_context
@@ -442,6 +467,7 @@ Project documentation.
         # Initialize the space_parser global variable
         import server.mcp_http_server as mcp_module
         from server.parser.space_parser import SpaceParser
+
         mcp_module.space_parser = SpaceParser()
 
         from server.mcp_http_server import get_project_context
@@ -452,26 +478,33 @@ Project documentation.
         assert "error" in result
 
     @pytest.mark.asyncio
-    async def test_get_project_context_includes_related_pages(self, temp_space_path, monkeypatch):
+    async def test_get_project_context_includes_related_pages(
+        self, temp_space_path, monkeypatch
+    ):
         """get_project_context should include linked pages from the folder."""
         monkeypatch.setenv("SPACE_PATH", temp_space_path)
 
         # Create project with multiple pages
         Path(temp_space_path, "Projects").mkdir()
         Path(temp_space_path, "Projects/Project").mkdir()
-        Path(temp_space_path, "Projects/Project.md").write_text("""---
+        Path(temp_space_path, "Projects/Project.md").write_text(
+            """---
 github: test/project
 ---
 # Project Index
 
 See [[Architecture]] and [[Setup]].
-""")
-        Path(temp_space_path, "Projects/Project/Architecture.md").write_text("# Architecture")
+"""
+        )
+        Path(temp_space_path, "Projects/Project/Architecture.md").write_text(
+            "# Architecture"
+        )
         Path(temp_space_path, "Projects/Project/Setup.md").write_text("# Setup")
 
         # Initialize the space_parser global variable
         import server.mcp_http_server as mcp_module
         from server.parser.space_parser import SpaceParser
+
         mcp_module.space_parser = SpaceParser()
 
         from server.mcp_http_server import get_project_context
@@ -481,7 +514,10 @@ See [[Architecture]] and [[Setup]].
         assert result["success"] is True
         assert "related_pages" in result
         page_names = [p["name"] for p in result["related_pages"]]
-        assert "Architecture" in page_names or "Projects/Project/Architecture" in page_names
+        assert (
+            "Architecture" in page_names
+            or "Projects/Project/Architecture" in page_names
+        )
 
 
 class TestScopedSearch:
@@ -507,7 +543,7 @@ class TestScopedSearch:
                     content="Install Python dependencies",
                     links=[],
                     tags=[],
-                    frontmatter={}
+                    frontmatter={},
                 ),
                 Chunk(
                     file_path="Projects/ProjectB/readme.md",
@@ -516,7 +552,7 @@ class TestScopedSearch:
                     content="Install Python dependencies",
                     links=[],
                     tags=[],
-                    frontmatter={}
+                    frontmatter={},
                 ),
             ]
 
@@ -550,7 +586,7 @@ class TestScopedSearch:
                 content="Healthy eating habits",
                 links=[],
                 tags=[],
-                frontmatter={}
+                frontmatter={},
             ),
             Chunk(
                 file_path="Projects/Project/notes.md",
@@ -559,7 +595,7 @@ class TestScopedSearch:
                 content="Healthy coding practices",
                 links=[],
                 tags=[],
-                frontmatter={}
+                frontmatter={},
             ),
         ]
 
@@ -567,9 +603,7 @@ class TestScopedSearch:
 
         # Search with scope
         results = db.semantic_search(
-            query="healthy practices",
-            scope="Area/Health",
-            limit=10
+            query="healthy practices", scope="Area/Health", limit=10
         )
 
         # All results should be from Area/Health folder
@@ -586,9 +620,7 @@ class TestScopedSearch:
 
         # Test that scope parameter is accepted (function signature test)
         result = await hybrid_search_tool(
-            query="test query",
-            limit=10,
-            scope="Projects/MyProject"
+            query="test query", limit=10, scope="Projects/MyProject"
         )
 
         # Should not raise error about unexpected parameter
@@ -609,7 +641,7 @@ class TestChunkWithFolderPath:
             content="Content",
             links=[],
             tags=[],
-            frontmatter={}
+            frontmatter={},
         )
 
         assert chunk.folder_path == "Projects/Project"
@@ -625,9 +657,8 @@ class TestChunkWithFolderPath:
             content="Content",
             links=[],
             tags=[],
-            frontmatter={"github": "owner/repo", "tags": ["python"]}
+            frontmatter={"github": "owner/repo", "tags": ["python"]},
         )
 
         assert chunk.frontmatter["github"] == "owner/repo"
         assert "python" in chunk.frontmatter["tags"]
-

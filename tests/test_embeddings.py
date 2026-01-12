@@ -17,7 +17,7 @@ def has_openai_access():
 
 requires_openai = pytest.mark.skipif(
     not has_openai_access(),
-    reason="OpenAI tests skipped. Set RUN_OPENAI_TESTS=true to run."
+    reason="OpenAI tests skipped. Set RUN_OPENAI_TESTS=true to run.",
 )
 
 

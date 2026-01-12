@@ -20,7 +20,7 @@ class TestGRPCServer:
             gRPC channel for testing
         """
         # This will fail initially - proto not compiled
-        channel = grpc.insecure_channel('localhost:50051')
+        channel = grpc.insecure_channel("localhost:50051")
         yield channel
         channel.close()
 
@@ -31,6 +31,7 @@ class TestGRPCServer:
         """
         try:
             from server.grpc import rag_pb2, rag_pb2_grpc
+
             assert rag_pb2 is not None
             assert rag_pb2_grpc is not None
         except ImportError as e:
@@ -49,9 +50,7 @@ class TestGRPCServer:
 
         # Test QueryResponse structure
         response = rag_pb2.QueryResponse(
-            results_json='{"test": "data"}',
-            success=True,
-            error=""
+            results_json='{"test": "data"}', success=True, error=""
         )
         assert response.success is True
         assert response.error == ""
@@ -70,9 +69,7 @@ class TestGRPCServer:
 
         # Test SearchResponse structure
         response = rag_pb2.SearchResponse(
-            results_json='[{"file": "test.md"}]',
-            success=True,
-            error=""
+            results_json='[{"file": "test.md"}]', success=True, error=""
         )
         assert response.success is True
 
@@ -85,17 +82,13 @@ class TestGRPCServer:
 
         # Test UpdatePageRequest structure
         request = rag_pb2.UpdatePageRequest(
-            page_name="test.md",
-            content="# Test Page\n\nContent"
+            page_name="test.md", content="# Test Page\n\nContent"
         )
         assert request.page_name == "test.md"
         assert "Test Page" in request.content
 
         # Test UpdatePageResponse structure
-        response = rag_pb2.UpdatePageResponse(
-            success=True,
-            error=""
-        )
+        response = rag_pb2.UpdatePageResponse(success=True, error="")
         assert response.success is True
 
     def test_grpc_servicer_can_be_instantiated(self, temp_db_path, temp_space_path):
@@ -109,9 +102,9 @@ class TestGRPCServer:
 
         servicer = RAGServiceServicer(temp_db_path, temp_space_path)
         assert servicer is not None
-        assert hasattr(servicer, 'Query')
-        assert hasattr(servicer, 'Search')
-        assert hasattr(servicer, 'UpdatePage')
+        assert hasattr(servicer, "Query")
+        assert hasattr(servicer, "Search")
+        assert hasattr(servicer, "UpdatePage")
 
     @pytest.mark.asyncio
     async def test_grpc_server_starts(self):
@@ -144,7 +137,9 @@ class TestGRPCClientCalls:
         """
         return temp_db_path, temp_space_path
 
-    @pytest.mark.skip(reason="Requires running gRPC server - will implement after GREEN phase")
+    @pytest.mark.skip(
+        reason="Requires running gRPC server - will implement after GREEN phase"
+    )
     def test_query_rpc_call(self, temp_test_db):
         """RED: Test actual Query RPC call.
 
@@ -152,7 +147,9 @@ class TestGRPCClientCalls:
         """
         pass
 
-    @pytest.mark.skip(reason="Requires running gRPC server - will implement after GREEN phase")
+    @pytest.mark.skip(
+        reason="Requires running gRPC server - will implement after GREEN phase"
+    )
     def test_search_rpc_call(self, temp_test_db):
         """RED: Test actual Search RPC call.
 
@@ -160,7 +157,9 @@ class TestGRPCClientCalls:
         """
         pass
 
-    @pytest.mark.skip(reason="Requires running gRPC server - will implement after GREEN phase")
+    @pytest.mark.skip(
+        reason="Requires running gRPC server - will implement after GREEN phase"
+    )
     def test_update_page_rpc_call(self, temp_test_db):
         """RED: Test actual UpdatePage RPC call.
 

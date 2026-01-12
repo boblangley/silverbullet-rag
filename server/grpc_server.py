@@ -28,34 +28,22 @@ class RAGServiceServicer(rag_pb2_grpc.RAGServiceServicer):
         try:
             results = self.graph_db.cypher_query(request.cypher_query)
             return rag_pb2.QueryResponse(
-                results_json=json.dumps(results),
-                success=True,
-                error=""
+                results_json=json.dumps(results), success=True, error=""
             )
         except Exception as e:
             logging.error(f"Query error: {e}")
-            return rag_pb2.QueryResponse(
-                results_json="",
-                success=False,
-                error=str(e)
-            )
+            return rag_pb2.QueryResponse(results_json="", success=False, error=str(e))
 
     def Search(self, request, context):
         """Search by keyword."""
         try:
             results = self.graph_db.keyword_search(request.keyword)
             return rag_pb2.SearchResponse(
-                results_json=json.dumps(results),
-                success=True,
-                error=""
+                results_json=json.dumps(results), success=True, error=""
             )
         except Exception as e:
             logging.error(f"Search error: {e}")
-            return rag_pb2.SearchResponse(
-                results_json="",
-                success=False,
-                error=str(e)
-            )
+            return rag_pb2.SearchResponse(results_json="", success=False, error=str(e))
 
     def SemanticSearch(self, request, context):
         """Semantic search using vector embeddings."""
@@ -71,20 +59,16 @@ class RAGServiceServicer(rag_pb2_grpc.RAGServiceServicer):
                 query=request.query,
                 limit=limit,
                 filter_tags=filter_tags,
-                filter_pages=filter_pages
+                filter_pages=filter_pages,
             )
 
             return rag_pb2.SemanticSearchResponse(
-                results_json=json.dumps(results),
-                success=True,
-                error=""
+                results_json=json.dumps(results), success=True, error=""
             )
         except Exception as e:
             logging.error(f"SemanticSearch error: {e}")
             return rag_pb2.SemanticSearchResponse(
-                results_json="",
-                success=False,
-                error=str(e)
+                results_json="", success=False, error=str(e)
             )
 
     def HybridSearch(self, request, context):
@@ -97,8 +81,12 @@ class RAGServiceServicer(rag_pb2_grpc.RAGServiceServicer):
             # Use default values if not provided
             limit = request.limit if request.limit > 0 else 10
             fusion_method = request.fusion_method if request.fusion_method else "rrf"
-            semantic_weight = request.semantic_weight if request.semantic_weight > 0 else 0.5
-            keyword_weight = request.keyword_weight if request.keyword_weight > 0 else 0.5
+            semantic_weight = (
+                request.semantic_weight if request.semantic_weight > 0 else 0.5
+            )
+            keyword_weight = (
+                request.keyword_weight if request.keyword_weight > 0 else 0.5
+            )
 
             results = self.hybrid_search.search(
                 query=request.query,
@@ -107,26 +95,23 @@ class RAGServiceServicer(rag_pb2_grpc.RAGServiceServicer):
                 filter_pages=filter_pages,
                 fusion_method=fusion_method,
                 semantic_weight=semantic_weight,
-                keyword_weight=keyword_weight
+                keyword_weight=keyword_weight,
             )
 
             return rag_pb2.HybridSearchResponse(
-                results_json=json.dumps(results),
-                success=True,
-                error=""
+                results_json=json.dumps(results), success=True, error=""
             )
         except Exception as e:
             logging.error(f"HybridSearch error: {e}")
             return rag_pb2.HybridSearchResponse(
-                results_json="",
-                success=False,
-                error=str(e)
+                results_json="", success=False, error=str(e)
             )
 
     def UpdatePage(self, request, context):
         """Update a page and reindex."""
         try:
             from pathlib import Path
+
             space_dir = Path(self.space_path)
             page_path = space_dir / request.page_name
 
@@ -140,16 +125,10 @@ class RAGServiceServicer(rag_pb2_grpc.RAGServiceServicer):
             chunks = self.parser.parse_space(str(space_dir))
             self.graph_db.index_chunks(chunks)
 
-            return rag_pb2.UpdatePageResponse(
-                success=True,
-                error=""
-            )
+            return rag_pb2.UpdatePageResponse(success=True, error="")
         except Exception as e:
             logging.error(f"UpdatePage error: {e}")
-            return rag_pb2.UpdatePageResponse(
-                success=False,
-                error=str(e)
-            )
+            return rag_pb2.UpdatePageResponse(success=False, error=str(e))
 
 
 async def serve(db_path="/db", space_path="/space"):
@@ -168,7 +147,7 @@ async def serve(db_path="/db", space_path="/space"):
         RAGServiceServicer(db_path, space_path), server
     )
 
-    server.add_insecure_port('[::]:50051')
+    server.add_insecure_port("[::]:50051")
     logging.info("gRPC server starting on port 50051...")
 
     await server.start()

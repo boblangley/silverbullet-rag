@@ -40,26 +40,32 @@ class TestGraphDeletion:
 
         # Create multiple test files
         file1 = space / "page1.md"
-        file1.write_text("""# Page 1
+        file1.write_text(
+            """# Page 1
 
 ## Section 1
 Content with [[page2]] link and #tag1.
 
 ## Section 2
 More content with #tag2.
-""")
+"""
+        )
 
         file2 = space / "page2.md"
-        file2.write_text("""# Page 2
+        file2.write_text(
+            """# Page 2
 
 Content linking to [[page1]] with #tag1 #shared.
-""")
+"""
+        )
 
         file3 = space / "page3.md"
-        file3.write_text("""# Page 3
+        file3.write_text(
+            """# Page 3
 
 Standalone content with #tag3 #shared.
-""")
+"""
+        )
 
         # Index all files
         parser = SpaceParser()
@@ -73,7 +79,7 @@ Standalone content with #tag3 #shared.
 
         This should FAIL because the method hasn't been implemented yet.
         """
-        assert hasattr(graph_db, 'delete_chunks_by_file')
+        assert hasattr(graph_db, "delete_chunks_by_file")
         assert callable(graph_db.delete_chunks_by_file)
 
     def test_delete_single_file_removes_chunks(self, indexed_space):
@@ -86,16 +92,20 @@ Standalone content with #tag3 #shared.
 
         # Verify chunks exist before deletion
         query = "MATCH (c:Chunk {file_path: $file_path}) RETURN count(c) as count"
-        result = graph_db.cypher_query(query.replace("$file_path", f"'{str(file_to_delete)}'"))
-        initial_count = result[0]['col0'] if result else 0
+        result = graph_db.cypher_query(
+            query.replace("$file_path", f"'{str(file_to_delete)}'")
+        )
+        initial_count = result[0]["col0"] if result else 0
         assert initial_count > 0, "File should have chunks before deletion"
 
         # Delete the file's chunks
         graph_db.delete_chunks_by_file(str(file_to_delete))
 
         # Verify chunks are removed
-        result = graph_db.cypher_query(query.replace("$file_path", f"'{str(file_to_delete)}'"))
-        final_count = result[0]['col0'] if result else 0
+        result = graph_db.cypher_query(
+            query.replace("$file_path", f"'{str(file_to_delete)}'")
+        )
+        final_count = result[0]["col0"] if result else 0
         assert final_count == 0, "All chunks should be deleted"
 
     def test_delete_file_with_unique_tag_removes_tag(self, indexed_space):
@@ -111,14 +121,14 @@ Standalone content with #tag3 #shared.
         # Verify tag exists before deletion
         query = "MATCH (t:Tag {name: 'tag3'}) RETURN count(t) as count"
         result = graph_db.cypher_query(query)
-        assert result[0]['col0'] > 0, "Tag should exist before deletion"
+        assert result[0]["col0"] > 0, "Tag should exist before deletion"
 
         # Delete the file
         graph_db.delete_chunks_by_file(str(file_to_delete))
 
         # Verify orphaned tag is removed
         result = graph_db.cypher_query(query)
-        count = result[0]['col0'] if result else 0
+        count = result[0]["col0"] if result else 0
         assert count == 0, "Orphaned tag should be removed"
 
     def test_delete_file_with_shared_tag_keeps_tag(self, indexed_space):
@@ -137,7 +147,7 @@ Standalone content with #tag3 #shared.
         # Verify shared tag still exists (used by page3)
         query = "MATCH (t:Tag {name: 'shared'}) RETURN count(t) as count"
         result = graph_db.cypher_query(query)
-        assert result[0]['col0'] > 0, "Shared tag should still exist"
+        assert result[0]["col0"] > 0, "Shared tag should still exist"
 
     def test_delete_file_with_unique_wikilink_removes_page(self, indexed_space):
         """RED: Test that deleting a file removes orphaned Page nodes.
@@ -157,13 +167,13 @@ Standalone content with #tag3 #shared.
         # Note: page2 as a Page node should be removed (no incoming links after deletion)
         query = "MATCH (p:Page {name: 'page2'}) RETURN count(p) as count"
         result = graph_db.cypher_query(query)
-        count = result[0]['col0'] if result else 0
+        count = result[0]["col0"] if result else 0
         # This is tricky - page1 still links TO page2, so Page node might remain
         # But chunks from page2 are gone
         # Let's verify chunks are gone
         query_chunks = f"MATCH (c:Chunk) WHERE c.file_path CONTAINS 'page2.md' RETURN count(c) as count"
         result = graph_db.cypher_query(query_chunks)
-        count = result[0]['col0'] if result else 0
+        count = result[0]["col0"] if result else 0
         assert count == 0, "No chunks should reference deleted file"
 
     def test_delete_nonexistent_file_doesnt_crash(self, graph_db):
@@ -226,8 +236,10 @@ class TestOrphanCleanup:
         graph_db.cypher_query(query)
 
         # Verify it exists
-        result = graph_db.cypher_query("MATCH (t:Tag {name: 'orphan'}) RETURN count(t) as count")
-        assert result[0]['col0'] > 0
+        result = graph_db.cypher_query(
+            "MATCH (t:Tag {name: 'orphan'}) RETURN count(t) as count"
+        )
+        assert result[0]["col0"] > 0
 
         # Call cleanup (should be part of delete_chunks_by_file)
         # For now, test that we can identify orphans
@@ -238,7 +250,7 @@ class TestOrphanCleanup:
         """
         result = graph_db.cypher_query(orphan_query)
         assert len(result) > 0, "Should find orphaned tags"
-        assert any(r.get('col0') == 'orphan' or 'orphan' in str(r) for r in result)
+        assert any(r.get("col0") == "orphan" or "orphan" in str(r) for r in result)
 
     def test_cleanup_orphaned_pages(self, graph_db):
         """RED: Test that orphaned Page nodes are identified and removed.
@@ -250,8 +262,10 @@ class TestOrphanCleanup:
         graph_db.cypher_query(query)
 
         # Verify it exists
-        result = graph_db.cypher_query("MATCH (p:Page {name: 'orphan_page'}) RETURN count(p) as count")
-        assert result[0]['col0'] > 0
+        result = graph_db.cypher_query(
+            "MATCH (p:Page {name: 'orphan_page'}) RETURN count(p) as count"
+        )
+        assert result[0]["col0"] > 0
 
         # Call cleanup to identify orphans
         orphan_query = """

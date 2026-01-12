@@ -34,11 +34,11 @@ async def list_tools() -> list[Tool]:
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "The Cypher query to execute"
+                        "description": "The Cypher query to execute",
                     }
                 },
-                "required": ["query"]
-            }
+                "required": ["query"],
+            },
         ),
         Tool(
             name="keyword_search",
@@ -48,11 +48,11 @@ async def list_tools() -> list[Tool]:
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "The keyword to search for"
+                        "description": "The keyword to search for",
                     }
                 },
-                "required": ["query"]
-            }
+                "required": ["query"],
+            },
         ),
         Tool(
             name="read_page",
@@ -62,11 +62,11 @@ async def list_tools() -> list[Tool]:
                 "properties": {
                     "page_name": {
                         "type": "string",
-                        "description": "Name of the page to read (e.g., 'MyPage.md')"
+                        "description": "Name of the page to read (e.g., 'MyPage.md')",
                     }
                 },
-                "required": ["page_name"]
-            }
+                "required": ["page_name"],
+            },
         ),
         Tool(
             name="update_page",
@@ -76,15 +76,15 @@ async def list_tools() -> list[Tool]:
                 "properties": {
                     "page_name": {
                         "type": "string",
-                        "description": "Name of the page to update"
+                        "description": "Name of the page to update",
                     },
                     "content": {
                         "type": "string",
-                        "description": "New content for the page"
-                    }
+                        "description": "New content for the page",
+                    },
                 },
-                "required": ["page_name", "content"]
-            }
+                "required": ["page_name", "content"],
+            },
         ),
         Tool(
             name="semantic_search",
@@ -94,26 +94,26 @@ async def list_tools() -> list[Tool]:
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "Natural language query to search for"
+                        "description": "Natural language query to search for",
                     },
                     "limit": {
                         "type": "integer",
                         "description": "Maximum number of results to return (default: 10)",
-                        "default": 10
+                        "default": 10,
                     },
                     "filter_tags": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Optional list of tags to filter results by"
+                        "description": "Optional list of tags to filter results by",
                     },
                     "filter_pages": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Optional list of page paths to filter results by"
-                    }
+                        "description": "Optional list of page paths to filter results by",
+                    },
                 },
-                "required": ["query"]
-            }
+                "required": ["query"],
+            },
         ),
         Tool(
             name="hybrid_search",
@@ -123,46 +123,46 @@ async def list_tools() -> list[Tool]:
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "Search query - can be keywords or natural language"
+                        "description": "Search query - can be keywords or natural language",
                     },
                     "limit": {
                         "type": "integer",
                         "description": "Maximum number of results to return (default: 10)",
-                        "default": 10
+                        "default": 10,
                     },
                     "filter_tags": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Optional list of tags to filter results by"
+                        "description": "Optional list of tags to filter results by",
                     },
                     "filter_pages": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Optional list of page paths to filter results by"
+                        "description": "Optional list of page paths to filter results by",
                     },
                     "fusion_method": {
                         "type": "string",
                         "enum": ["rrf", "weighted"],
                         "description": "Fusion method: 'rrf' (Reciprocal Rank Fusion, default) or 'weighted' (custom weights)",
-                        "default": "rrf"
+                        "default": "rrf",
                     },
                     "semantic_weight": {
                         "type": "number",
                         "description": "Weight for semantic search (0-1, only used with weighted fusion, default: 0.5)",
                         "default": 0.5,
                         "minimum": 0,
-                        "maximum": 1
+                        "maximum": 1,
                     },
                     "keyword_weight": {
                         "type": "number",
                         "description": "Weight for keyword search (0-1, only used with weighted fusion, default: 0.5)",
                         "default": 0.5,
                         "minimum": 0,
-                        "maximum": 1
-                    }
+                        "maximum": 1,
+                    },
                 },
-                "required": ["query"]
-            }
+                "required": ["query"],
+            },
         ),
     ]
 
@@ -175,20 +175,14 @@ async def call_tool(name: str, arguments: Any) -> CallToolResult:
             query = arguments["query"]
             results = graph_db.cypher_query(query)
             return CallToolResult(
-                content=[TextContent(
-                    type="text",
-                    text=json.dumps(results, indent=2)
-                )]
+                content=[TextContent(type="text", text=json.dumps(results, indent=2))]
             )
 
         elif name == "keyword_search":
             keyword = arguments["query"]
             results = graph_db.keyword_search(keyword)
             return CallToolResult(
-                content=[TextContent(
-                    type="text",
-                    text=json.dumps(results, indent=2)
-                )]
+                content=[TextContent(type="text", text=json.dumps(results, indent=2))]
             )
 
         elif name == "read_page":
@@ -201,9 +195,7 @@ async def call_tool(name: str, arguments: Any) -> CallToolResult:
                 raise ValueError("Invalid page name")
 
             content = page_path.read_text()
-            return CallToolResult(
-                content=[TextContent(type="text", text=content)]
-            )
+            return CallToolResult(content=[TextContent(type="text", text=content)])
 
         elif name == "update_page":
             page_name = arguments["page_name"]
@@ -222,10 +214,7 @@ async def call_tool(name: str, arguments: Any) -> CallToolResult:
             graph_db.index_chunks(chunks)
 
             return CallToolResult(
-                content=[TextContent(
-                    type="text",
-                    text="Page updated successfully"
-                )]
+                content=[TextContent(type="text", text="Page updated successfully")]
             )
 
         elif name == "semantic_search":
@@ -238,14 +227,11 @@ async def call_tool(name: str, arguments: Any) -> CallToolResult:
                 query=query,
                 limit=limit,
                 filter_tags=filter_tags,
-                filter_pages=filter_pages
+                filter_pages=filter_pages,
             )
 
             return CallToolResult(
-                content=[TextContent(
-                    type="text",
-                    text=json.dumps(results, indent=2)
-                )]
+                content=[TextContent(type="text", text=json.dumps(results, indent=2))]
             )
 
         elif name == "hybrid_search":
@@ -264,14 +250,11 @@ async def call_tool(name: str, arguments: Any) -> CallToolResult:
                 filter_pages=filter_pages,
                 fusion_method=fusion_method,
                 semantic_weight=semantic_weight,
-                keyword_weight=keyword_weight
+                keyword_weight=keyword_weight,
             )
 
             return CallToolResult(
-                content=[TextContent(
-                    type="text",
-                    text=json.dumps(results, indent=2)
-                )]
+                content=[TextContent(type="text", text=json.dumps(results, indent=2))]
             )
 
         else:
@@ -279,11 +262,7 @@ async def call_tool(name: str, arguments: Any) -> CallToolResult:
 
     except Exception as e:
         return CallToolResult(
-            content=[TextContent(
-                type="text",
-                text=f"Error: {str(e)}"
-            )],
-            isError=True
+            content=[TextContent(type="text", text=f"Error: {str(e)}")], isError=True
         )
 
 
@@ -297,11 +276,7 @@ async def main():
 
     # Run the server
     async with stdio_server() as (read_stream, write_stream):
-        await app.run(
-            read_stream,
-            write_stream,
-            app.create_initialization_options()
-        )
+        await app.run(read_stream, write_stream, app.create_initialization_options())
 
 
 if __name__ == "__main__":

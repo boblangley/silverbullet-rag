@@ -27,7 +27,7 @@ mcp = FastMCP(
     name="silverbullet-rag",
     host="0.0.0.0",  # Listen on all interfaces for Docker
     port=8000,
-    json_response=True  # Recommended for production
+    json_response=True,  # Recommended for production
 )
 
 # Global instances (initialized on startup)
@@ -82,7 +82,7 @@ async def semantic_search(
     query: str,
     limit: int = 10,
     filter_tags: Optional[List[str]] = None,
-    filter_pages: Optional[List[str]] = None
+    filter_pages: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     AI-powered semantic search using vector embeddings.
@@ -98,10 +98,7 @@ async def semantic_search(
     """
     try:
         results = graph_db.semantic_search(
-            query=query,
-            limit=limit,
-            filter_tags=filter_tags,
-            filter_pages=filter_pages
+            query=query, limit=limit, filter_tags=filter_tags, filter_pages=filter_pages
         )
         return {"success": True, "results": results}
     except Exception as e:
@@ -119,7 +116,7 @@ async def hybrid_search_tool(
     fusion_method: str = "rrf",
     semantic_weight: float = 0.5,
     keyword_weight: float = 0.5,
-    scope: Optional[str] = None
+    scope: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Combined keyword + semantic search with result fusion.
@@ -146,7 +143,7 @@ async def hybrid_search_tool(
             fusion_method=fusion_method,
             semantic_weight=semantic_weight,
             keyword_weight=keyword_weight,
-            scope=scope
+            scope=scope,
         )
         return {"success": True, "results": results}
     except Exception as e:
@@ -157,8 +154,7 @@ async def hybrid_search_tool(
 # Tool 5: Get Project Context
 @mcp.tool()
 async def get_project_context(
-    github_remote: Optional[str] = None,
-    folder_path: Optional[str] = None
+    github_remote: Optional[str] = None, folder_path: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Get project context from Silverbullet space by GitHub remote or folder path.
@@ -179,7 +175,7 @@ async def get_project_context(
         if not github_remote and not folder_path:
             return {
                 "success": False,
-                "error": "Must provide either github_remote or folder_path"
+                "error": "Must provide either github_remote or folder_path",
             }
 
         project_file = None
@@ -223,7 +219,7 @@ async def get_project_context(
         if not project_file:
             return {
                 "success": False,
-                "error": f"No project found for github_remote={github_remote}, folder_path={folder_path}"
+                "error": f"No project found for github_remote={github_remote}, folder_path={folder_path}",
             }
 
         # Read the project file content
@@ -241,20 +237,21 @@ async def get_project_context(
             folder_dir = space_path / folder
             for md_file in folder_dir.glob("*.md"):
                 if md_file != project_file:
-                    related_pages.append({
-                        "name": md_file.stem,
-                        "path": str(md_file.relative_to(space_path))
-                    })
+                    related_pages.append(
+                        {
+                            "name": md_file.stem,
+                            "path": str(md_file.relative_to(space_path)),
+                        }
+                    )
 
         # Also check for subdirectory matching the project file name
         # e.g., for Projects/Project.md, check Projects/Project/ directory
         project_subdir = project_file.parent / project_file.stem
         if project_subdir.exists() and project_subdir.is_dir():
             for md_file in project_subdir.glob("**/*.md"):
-                related_pages.append({
-                    "name": md_file.stem,
-                    "path": str(md_file.relative_to(space_path))
-                })
+                related_pages.append(
+                    {"name": md_file.stem, "path": str(md_file.relative_to(space_path))}
+                )
 
         return {
             "success": True,
@@ -263,9 +260,9 @@ async def get_project_context(
                 "github": frontmatter.get("github"),
                 "tags": frontmatter.get("tags", []),
                 "concerns": frontmatter.get("concerns", []),
-                "content": clean_content
+                "content": clean_content,
             },
-            "related_pages": related_pages[:20]  # Limit to 20 related pages
+            "related_pages": related_pages[:20],  # Limit to 20 related pages
         }
 
     except Exception as e:
@@ -333,10 +330,7 @@ async def update_page(page_name: str, content: str) -> Dict[str, Any]:
         # File watcher will trigger reindexing automatically
         logger.info(f"Updated page: {page_name}")
 
-        return {
-            "success": True,
-            "message": f"Page '{page_name}' updated successfully"
-        }
+        return {"success": True, "message": f"Page '{page_name}' updated successfully"}
     except Exception as e:
         logger.error(f"Failed to update page '{page_name}': {e}")
         return {"success": False, "error": str(e)}
