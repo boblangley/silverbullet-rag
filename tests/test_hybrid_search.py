@@ -68,7 +68,7 @@ have been passed down through generations.
     return space
 
 
-def test_hybrid_search_initialization(temp_db_path: str, mock_openai_embeddings):
+def test_hybrid_search_initialization(temp_db_path: str):
     """Test that HybridSearch can be initialized with GraphDB."""
     # Arrange
     graph_db = GraphDB(temp_db_path, enable_embeddings=True)
@@ -81,7 +81,7 @@ def test_hybrid_search_initialization(temp_db_path: str, mock_openai_embeddings)
     assert hybrid_search.graph_db is graph_db
 
 
-def test_hybrid_search_basic(temp_db_path: str, diverse_docs_for_hybrid: Path, mock_openai_embeddings):
+def test_hybrid_search_basic(temp_db_path: str, diverse_docs_for_hybrid: Path):
     """Test basic hybrid search functionality.
 
     Hybrid search should combine keyword and semantic results.
@@ -108,7 +108,7 @@ def test_hybrid_search_basic(temp_db_path: str, diverse_docs_for_hybrid: Path, m
         assert "semantic_score" in result, "Each result should have semantic score"
 
 
-def test_hybrid_search_outperforms_keyword_only(temp_db_path: str, diverse_docs_for_hybrid: Path, mock_openai_embeddings):
+def test_hybrid_search_outperforms_keyword_only(temp_db_path: str, diverse_docs_for_hybrid: Path):
     """Test that hybrid search finds semantically relevant documents that keyword search misses.
 
     Query: "data management platform"
@@ -136,7 +136,7 @@ def test_hybrid_search_outperforms_keyword_only(temp_db_path: str, diverse_docs_
         "Hybrid search should find semantically relevant document"
 
 
-def test_hybrid_search_outperforms_semantic_only(temp_db_path: str, diverse_docs_for_hybrid: Path, mock_openai_embeddings):
+def test_hybrid_search_outperforms_semantic_only(temp_db_path: str, diverse_docs_for_hybrid: Path):
     """Test that hybrid search benefits from keyword precision.
 
     Query with specific technical term should rank exact matches higher.
@@ -163,7 +163,7 @@ def test_hybrid_search_outperforms_semantic_only(temp_db_path: str, diverse_docs
         "Hybrid search should prioritize exact keyword matches"
 
 
-def test_hybrid_search_rrf_fusion(temp_db_path: str, diverse_docs_for_hybrid: Path, mock_openai_embeddings):
+def test_hybrid_search_rrf_fusion(temp_db_path: str, diverse_docs_for_hybrid: Path):
     """Test Reciprocal Rank Fusion (RRF) is applied correctly.
 
     RRF formula: score(d) = sum over all rankings r: 1 / (k + rank(d, r))
@@ -194,7 +194,7 @@ def test_hybrid_search_rrf_fusion(temp_db_path: str, diverse_docs_for_hybrid: Pa
     assert scores == sorted(scores, reverse=True), "Results should be sorted by hybrid score"
 
 
-def test_hybrid_search_weighted_fusion(temp_db_path: str, diverse_docs_for_hybrid: Path, mock_openai_embeddings):
+def test_hybrid_search_weighted_fusion(temp_db_path: str, diverse_docs_for_hybrid: Path):
     """Test weighted fusion with custom weights for keyword vs semantic."""
     # Arrange
     graph_db = GraphDB(temp_db_path, enable_embeddings=True)
@@ -234,7 +234,7 @@ def test_hybrid_search_weighted_fusion(temp_db_path: str, diverse_docs_for_hybri
                "Different fusion weights should affect results"
 
 
-def test_hybrid_search_with_filters(temp_db_path: str, diverse_docs_for_hybrid: Path, mock_openai_embeddings):
+def test_hybrid_search_with_filters(temp_db_path: str, diverse_docs_for_hybrid: Path):
     """Test that hybrid search supports tag and page filtering."""
     # Arrange
     graph_db = GraphDB(temp_db_path, enable_embeddings=True)
@@ -268,7 +268,7 @@ def test_hybrid_search_with_filters(temp_db_path: str, diverse_docs_for_hybrid: 
         assert "database" in tag_names, f"Result should have 'database' tag"
 
 
-def test_hybrid_search_empty_query(temp_db_path: str, diverse_docs_for_hybrid: Path, mock_openai_embeddings):
+def test_hybrid_search_empty_query(temp_db_path: str, diverse_docs_for_hybrid: Path):
     """Test hybrid search handles empty queries gracefully."""
     # Arrange
     graph_db = GraphDB(temp_db_path, enable_embeddings=True)
@@ -283,7 +283,7 @@ def test_hybrid_search_empty_query(temp_db_path: str, diverse_docs_for_hybrid: P
         hybrid_search.search(query="", limit=10)
 
 
-def test_hybrid_search_no_results(temp_db_path: str, diverse_docs_for_hybrid: Path, mock_openai_embeddings):
+def test_hybrid_search_no_results(temp_db_path: str, diverse_docs_for_hybrid: Path):
     """Test hybrid search handles queries with no matching results."""
     # Arrange
     graph_db = GraphDB(temp_db_path, enable_embeddings=True)
@@ -300,7 +300,7 @@ def test_hybrid_search_no_results(temp_db_path: str, diverse_docs_for_hybrid: Pa
     assert len(results) == 0, "Should return empty list when no results match"
 
 
-def test_hybrid_search_limit_parameter(temp_db_path: str, diverse_docs_for_hybrid: Path, mock_openai_embeddings):
+def test_hybrid_search_limit_parameter(temp_db_path: str, diverse_docs_for_hybrid: Path):
     """Test that limit parameter controls number of results."""
     # Arrange
     graph_db = GraphDB(temp_db_path, enable_embeddings=True)
@@ -319,7 +319,7 @@ def test_hybrid_search_limit_parameter(temp_db_path: str, diverse_docs_for_hybri
     assert len(results_large) >= len(results_small), "Larger limit should return more results"
 
 
-def test_hybrid_search_deduplication(temp_db_path: str, diverse_docs_for_hybrid: Path, mock_openai_embeddings):
+def test_hybrid_search_deduplication(temp_db_path: str, diverse_docs_for_hybrid: Path):
     """Test that hybrid search deduplicates results from keyword and semantic search.
 
     A document appearing in both keyword and semantic results should appear only once

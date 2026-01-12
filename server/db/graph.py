@@ -1,12 +1,14 @@
 """Graph database operations using LadybugDB."""
 
 import json
-from datetime import date, datetime
-from typing import List, Dict, Any, Optional
-import real_ladybug as lb
-from ..parser import Chunk, Transclusion, InlineAttribute, DataBlock
-from ..embeddings import EmbeddingService
 import logging
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional
+
+import real_ladybug as lb
+
+from ..embeddings import EmbeddingService
+from ..parser import Chunk, DataBlock, InlineAttribute, Transclusion
 
 logger = logging.getLogger(__name__)
 
@@ -444,7 +446,7 @@ class GraphDB:
 
         Args:
             keyword: Keyword or keywords to search for
-            scope: Optional folder path to scope results to (e.g., "Codex/ProjectA")
+            scope: Optional folder path to scope results to (e.g., "Projects/ProjectA")
 
         Returns:
             List of matching chunks with BM25 scores, sorted by relevance
@@ -645,7 +647,7 @@ class GraphDB:
             limit: Maximum number of results to return (default: 10)
             filter_tags: Optional list of tags to filter results by
             filter_pages: Optional list of page names to filter results by
-            scope: Optional folder path to scope results to (e.g., "Codex/ProjectA")
+            scope: Optional folder path to scope results to (e.g., "Projects/ProjectA")
 
         Returns:
             List of matching chunks with similarity scores
@@ -750,3 +752,4 @@ class GraphDB:
         # LadybugDB values are already Python-compatible
         # Add any necessary conversions here
         return value
+

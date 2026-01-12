@@ -6,7 +6,6 @@ import tempfile
 from pathlib import Path
 from typing import Generator
 import pytest
-from unittest.mock import Mock, patch
 
 
 @pytest.fixture
@@ -64,31 +63,6 @@ Another section with [[another-link]] and #test #example tags.
 
 
 @pytest.fixture
-def mock_openai_embeddings():
-    """Mock OpenAI API embedding responses for fast tests.
-
-    Returns:
-        Mock object for OpenAI embedding calls
-    """
-    # Mock the OpenAI client's embeddings.create method
-    with patch("openai.OpenAI") as mock_client_class:
-        # Create a mock client instance
-        mock_client = Mock()
-        mock_client_class.return_value = mock_client
-
-        # Mock the embeddings.create response
-        mock_embedding_obj = Mock()
-        mock_embedding_obj.embedding = [0.1] * 1536  # text-embedding-3-small dimension
-
-        mock_response = Mock()
-        mock_response.data = [mock_embedding_obj]
-
-        mock_client.embeddings.create.return_value = mock_response
-
-        yield mock_client
-
-
-@pytest.fixture
 def silverbullet_test_data() -> Path:
     """Path to Silverbullet test data submodule.
 
@@ -102,8 +76,11 @@ def silverbullet_test_data() -> Path:
 def env_setup(monkeypatch):
     """Setup test environment variables.
 
+    Uses local fastembed provider for tests to avoid OpenAI API calls.
+
     Args:
         monkeypatch: Pytest monkeypatch fixture
     """
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key-12345")
-    monkeypatch.setenv("EMBEDDING_MODEL", "text-embedding-3-small")
+    # Use local provider for tests - no API key needed
+    monkeypatch.setenv("EMBEDDING_PROVIDER", "local")
+    monkeypatch.setenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
