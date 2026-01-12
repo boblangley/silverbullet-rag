@@ -31,6 +31,33 @@ __pycache__/
 *.egg
 .pytest_cache/
 .mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Environment variables (may contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Virtual environments
+venv/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Database files (local testing)
+*.lbug
+*.lbug-lock
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Generated proto files
 server/grpc/*_pb2.py
