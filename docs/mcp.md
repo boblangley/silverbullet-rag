@@ -11,15 +11,15 @@ Silverbullet RAG exposes a [Model Context Protocol (MCP)](https://modelcontextpr
 
 ## Available Tools
 
-| Tool | Description |
-|------|-------------|
-| `cypher_query` | Execute Cypher queries against the knowledge graph |
-| `keyword_search` | BM25-ranked keyword search |
-| `semantic_search` | AI-powered vector similarity search |
-| `hybrid_search_tool` | Combined keyword + semantic search with RRF fusion |
+| Tool                  | Description                                         |
+| --------------------- | --------------------------------------------------- |
+| `cypher_query`        | Execute Cypher queries against the knowledge graph  |
+| `keyword_search`      | BM25-ranked keyword search                          |
+| `semantic_search`     | AI-powered vector similarity search                 |
+| `hybrid_search_tool`  | Combined keyword + semantic search with RRF fusion  |
 | `get_project_context` | Get project context by GitHub remote or folder path |
-| `read_page` | Read contents of a Silverbullet page |
-| `update_page` | Create or update a Silverbullet page |
+| `read_page`           | Read contents of a Silverbullet page                |
+| `update_page`         | Create or update a Silverbullet page                |
 
 ---
 
@@ -350,7 +350,7 @@ Combined keyword and semantic search with result fusion.
     "fusion_method": "rrf",
     "semantic_weight": 0.5,
     "keyword_weight": 0.5,
-    "scope": "Codex/ProjectA"
+    "scope": "Projects/ProjectA"
   }
 }
 ```
@@ -380,7 +380,7 @@ Or by folder:
 {
   "name": "get_project_context",
   "arguments": {
-    "folder_path": "Codex/MyProject"
+    "folder_path": "Projects/MyProject"
   }
 }
 ```

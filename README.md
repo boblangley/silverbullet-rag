@@ -1,28 +1,21 @@
 # Silverbullet RAG
 
-A production-ready RAG (Retrieval-Augmented Generation) system for Silverbullet that uses LadybugDB for graph-based knowledge storage, OpenAI embeddings for semantic search, and Model Context Protocol (MCP) for AI assistant integration.
+A RAG (Retrieval-Augmented Generation) system for [Silverbullet](https://silverbullet.md) that indexes your knowledge base into a searchable graph with vector embeddings, exposed via MCP and gRPC for AI assistant integration.
 
 ## Features
 
-- **Graph-based Knowledge Storage**: Uses LadybugDB to store pages, chunks, links, tags, and folders as a graph
-- **Folder Hierarchy**: Tracks folder structure with `CONTAINS` relationships for scoped searches
-- **Project Context**: Automatic context injection via `get_project_context` tool using GitHub remotes or folder paths
-- **YAML Frontmatter Parsing**: Extracts `github` and `tags` metadata from markdown files
-- **Scoped Search**: Filter search results to specific folders/projects using `scope` parameter
-- **Semantic Search**: AI-powered search using OpenAI embeddings with HNSW vector indexing
-- **BM25 Keyword Search**: Professional-grade keyword search with tag boosting and technical term detection
-- **Hybrid Search**: Combines keyword and semantic search using Reciprocal Rank Fusion (RRF) or weighted fusion
-- **MCP Server**: Exposes 7 tools via Model Context Protocol for AI assistants like Claude
-- **gRPC API**: Fast access for Silverbullet hooks and other integrations
-- **File Watcher**: Automatically reindexes when files change
-- **Open WebUI Pipe**: RAG integration for Open WebUI
-- **Markdown Parsing**: Chunks documents by headings, extracts wikilinks and tags
-- **Silverbullet v2 Support**: Transclusion expansion, inline attributes, data blocks
-- **Content Cleaning**: Removes Silverbullet syntax noise before embedding
+- **Knowledge Graph**: Pages, chunks, links, tags, and folders stored in LadybugDB
+- **Semantic Search**: OpenAI or local (fastembed) embeddings with HNSW vector indexing
+- **BM25 Keyword Search**: Tag boosting, technical term detection, header boosting
+- **Hybrid Search**: Combines keyword + semantic using Reciprocal Rank Fusion
+- **Silverbullet v2**: Transclusion expansion, inline attributes `[key: value]`, data blocks
+- **MCP Server**: 7 tools for AI assistants (Claude, Cursor, etc.)
+- **gRPC API**: Fast access for Silverbullet hooks
+- **File Watcher**: Auto-reindex on changes
 
 ## Quick Start
 
-Initialize your RAG index:
+### 1. Initialize the Index
 
 ```bash
 docker run --rm \
@@ -31,492 +24,116 @@ docker run --rm \
   -e DB_PATH=/data/ladybug \
   -e SPACE_PATH=/space \
   -e OPENAI_API_KEY=${OPENAI_API_KEY} \
-  -e ENABLE_EMBEDDINGS=true \
-  silverbullet-rag \
+  ghcr.io/YOUR_USERNAME/silverbullet-rag:latest \
   python -m server.init_index
 ```
 
-### Rebuilding the Index
+Use `--rebuild` to clear and rebuild the database from scratch.
 
-To completely rebuild the database (useful after schema changes or to clear stale data):
-
-```bash
-docker run --rm \
-  -v silverbullet-space:/space:ro \
-  -v ladybug-db:/data \
-  -e DB_PATH=/data/ladybug \
-  -e SPACE_PATH=/space \
-  -e OPENAI_API_KEY=${OPENAI_API_KEY} \
-  -e ENABLE_EMBEDDINGS=true \
-  silverbullet-rag \
-  python -m server.init_index --rebuild
-```
-
-**CLI Options:**
-- `--rebuild` - Clear the database and rebuild from scratch
-- `--space-path PATH` - Override the space path
-- `--db-path PATH` - Override the database path
-- `--no-embeddings` - Disable embedding generation (keyword search only)
-
-### Option 1: Using Pre-built Image from GitHub Container Registry
+### 2. Start the Server
 
 ```bash
-# Set OpenAI API key in .env file
+# Create .env file
 echo "OPENAI_API_KEY=your-key-here" > .env
-echo "EMBEDDING_MODEL=text-embedding-3-small" >> .env
 
-# Pull the latest image
-docker pull ghcr.io/YOUR_USERNAME/silverbullet-rag:latest
-
-# Start services using docker-compose
+# Start with docker-compose
 docker-compose up -d
-
-# View logs
-docker-compose logs -f mcp-server
 ```
 
-### Option 2: Build from Source
+### 3. Connect Your AI Assistant
 
-```bash
-# Set OpenAI API key
-echo "OPENAI_API_KEY=your-key-here" > .env
-echo "EMBEDDING_MODEL=text-embedding-3-small" >> .env
-
-# Build and start services
-docker-compose up -d --build
-
-# View logs
-docker-compose logs -f mcp-server
-```
-
-## Connecting to the MCP Server
-
-### From Claude Desktop (or other MCP clients)
-
-Add to your MCP client configuration file (e.g., `claude_desktop_config.json`):
+Add to your MCP client config (e.g., `.mcp.json`):
 
 ```json
 {
   "mcpServers": {
     "silverbullet-rag": {
-      "url": "http://YOUR_SERVER_IP:8000/mcp",
-      "transport": "http"
+      "type": "url",
+      "url": "http://localhost:8000/mcp"
     }
   }
 }
 ```
 
-Replace `YOUR_SERVER_IP` with your server's IP address:
-- **Local development**: `http://localhost:8000/mcp`
-- **Home network**: `http://192.168.1.100:8000/mcp` (your server's LAN IP)
-- **Remote access**: `http://your-domain.com:8000/mcp` (requires port forwarding or VPN)
-
-### Testing the Connection
-
-```bash
-# Check if MCP server is running
-curl http://localhost:8000/mcp
-
-# View server logs
-docker-compose logs -f mcp-server
-
-# Check gRPC server
-grpcurl -plaintext localhost:50051 list
-```
-
-## gRPC Python Client
-
-For Python integrations (e.g., Silverbullet hooks), use the gRPC client:
-
-```python
-import grpc
-import json
-from server.grpc import rag_pb2, rag_pb2_grpc
-
-# Connect to the server
-channel = grpc.insecure_channel('localhost:50051')
-stub = rag_pb2_grpc.RAGServiceStub(channel)
-
-# Keyword search
-response = stub.Search(rag_pb2.SearchRequest(keyword="python"))
-if response.success:
-    results = json.loads(response.results_json)
-    for chunk in results:
-        print(f"Found: {chunk['col0']['file_path']}")
-
-# Semantic search
-response = stub.SemanticSearch(rag_pb2.SemanticSearchRequest(
-    query="How do I configure authentication?",
-    limit=10,
-    filter_tags=["config"]
-))
-
-# Hybrid search (best results)
-response = stub.HybridSearch(rag_pb2.HybridSearchRequest(
-    query="database optimization",
-    limit=10,
-    fusion_method="rrf",
-    semantic_weight=0.7,
-    keyword_weight=0.3
-))
-
-# Raw Cypher query
-response = stub.Query(rag_pb2.QueryRequest(
-    cypher_query="MATCH (c:Chunk)-[:TAGGED]->(t:Tag {name: 'python'}) RETURN c"
-))
-
-# Update a page (triggers reindexing)
-response = stub.UpdatePage(rag_pb2.UpdatePageRequest(
-    page_name="Notes/MyPage.md",
-    content="# My Page\n\nNew content."
-))
-
-channel.close()
-```
+See [docs/mcp.md](docs/mcp.md) for Claude Code, Cursor, VS Code, and JetBrains setup.
 
 ## MCP Tools
 
-The MCP server provides seven tools for AI assistants:
-
-1. **cypher_query** - Execute Cypher queries against the knowledge graph
-2. **keyword_search** - BM25-ranked keyword search with tag boosting (supports `scope` filter)
-3. **semantic_search** - AI-powered semantic search using vector embeddings (supports `scope` filter)
-4. **hybrid_search** - Advanced search combining keyword and semantic methods (supports `scope` filter)
-5. **get_project_context** - Get project context by GitHub remote or folder path
-6. **read_page** - Read a specific Silverbullet page
-7. **update_page** - Update or create a page (triggers reindexing)
-
-### Project Context
-
-The `get_project_context` tool enables automatic context injection when working on projects:
-
-```python
-# Find project by GitHub remote
-result = await get_project_context(github_remote="anthropics/claude-code")
-
-# Find project by folder path
-result = await get_project_context(folder_path="Codex/MyProject")
-```
-
-Returns the project index page content, YAML frontmatter metadata (github, tags, concerns), and related pages.
-
-### Scoped Search
-
-All search tools support a `scope` parameter to filter results to a specific folder:
-
-```python
-# Search only within a project folder
-results = await keyword_search(query="configuration", scope="Codex/MyProject")
-results = await hybrid_search(query="setup instructions", scope="Codex/MyProject")
-```
+| Tool | Description |
+|------|-------------|
+| `cypher_query` | Execute Cypher queries against the knowledge graph |
+| `keyword_search` | BM25-ranked keyword search |
+| `semantic_search` | Vector similarity search |
+| `hybrid_search_tool` | Combined keyword + semantic with RRF fusion |
+| `get_project_context` | Get project context by GitHub remote or folder path |
+| `read_page` | Read a Silverbullet page |
+| `update_page` | Create or update a page |
 
 ## Configuration
 
-Set these environment variables or edit `docker-compose.yml`:
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SPACE_PATH` | `/space` | Path to Silverbullet space |
+| `DB_PATH` | `/data/ladybug` | Path to LadybugDB database |
+| `EMBEDDING_PROVIDER` | `openai` | Embedding provider: `openai` or `local` |
+| `OPENAI_API_KEY` | (required for openai) | OpenAI API key for embeddings |
+| `EMBEDDING_MODEL` | varies by provider | Model name (see below) |
+| `ENABLE_EMBEDDINGS` | `true` | Set to `false` for keyword-only search |
 
-- `DB_PATH`: LadybugDB database path (default: `/data/ladybug`)
-- `SPACE_PATH`: Silverbullet space path (default: `/space`)
-- `OPENAI_API_KEY`: **Required** - OpenAI API key for embeddings
-- `EMBEDDING_MODEL`: Embedding model (default: `text-embedding-3-small`)
+### Embedding Providers
 
-**Note**: Embeddings are enabled by default. To disable (keyword search only), initialize `GraphDB` with `enable_embeddings=False`.
+**OpenAI** (default): Uses OpenAI API for embeddings. Requires `OPENAI_API_KEY`.
+- Default model: `text-embedding-3-small` (1536 dimensions)
 
-## Deployment
+**Local** (fastembed): Uses local models via [fastembed](https://github.com/qdrant/fastembed). No API key required.
+- Default model: `BAAI/bge-small-en-v1.5` (384 dimensions)
+- Good for privacy-sensitive deployments or testing without API costs
 
-### GitHub Container Registry (GHCR)
-
-Docker images are automatically built and published to GHCR via GitHub Actions:
-
-- **On push to main**: Tagged as `latest` and `main-<sha>`
-- **On version tags**: Tagged as `v1.0.0`, `v1.0`, `v1`
-- **Multi-platform**: Built for `linux/amd64` and `linux/arm64`
-
-For detailed deployment instructions (home network, VPN, reverse proxy, etc.), see [DEPLOYMENT.md](DEPLOYMENT.md).
-
-## Development
-
-### Setup
-```bash
-# Install dependencies
-poetry install
-
-# Run tests
-poetry run pytest tests/ -v --cov=server
-
-# Compile proto files (if modified)
-poetry run python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. --pyi_out=. server/grpc/rag.proto
-```
-
-### Test Data
-The Silverbullet repo is included as a git submodule at `test-data/silverbullet/` for comprehensive testing with real-world markdown.
-
-### Project Structure
-```
-server/
-├── db/
-│   └── graph.py         # LadybugDB wrapper with vector search (90%+ coverage)
-├── parser/
-│   └── space_parser.py  # Markdown parsing (95% test coverage)
-├── embeddings.py        # OpenAI embedding service (95% coverage)
-├── search.py            # Hybrid search with RRF fusion (90% coverage)
-├── grpc/
-│   └── rag.proto        # gRPC protocol (4 RPCs)
-├── grpc_server.py       # gRPC endpoint (Port 50051)
-├── mcp_server.py        # MCP stdio server [DEPRECATED - use mcp_http_server.py]
-├── mcp_http_server.py   # MCP HTTP server (Port 8000) - PRODUCTION
-├── watcher.py           # File system monitoring
-└── pipe/
-    └── openwebui_pipe.py # Open WebUI integration
-
-tests/                   # 119+ tests using TDD approach
-├── conftest.py          # Test fixtures with OpenAI mocking
-├── test_v2_features.py  # Silverbullet v2: transclusions, attributes, data blocks (22 tests)
-├── test_grpc_server.py  # gRPC functionality
-├── test_graph_deletion.py # Deletion & cleanup
-├── test_security.py     # Security protection
-├── test_embeddings.py   # Embedding service
-├── test_semantic_search.py # Vector search
-├── test_hybrid_search.py   # Hybrid search
-├── test_bm25_ranking.py    # BM25 keyword search
-└── test_mcp_http.py     # MCP HTTP transport
-```
-
-### Architecture
+## Architecture
 
 ```
-┌─────────────────┐
-│  Silverbullet   │
-│     Space       │
-└────────┬────────┘
-         │ (mounted volume)
-         ▼
-┌─────────────────┐
-│  File Watcher   │──► Detects changes
-└────────┬────────┘
-         ▼
-┌─────────────────┐
-│  Space Parser   │──► Extracts chunks, links, tags
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Embedding Svc   │──► OpenAI API (text-embedding-3-small)
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   LadybugDB     │──► Graph + Vector storage
-│  HNSW Index     │    (Cosine similarity)
-└────────┬────────┘
-         │
-    ┌────┴─────┬──────────┬──────────┐
-    ▼          ▼          ▼          ▼
-┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐
-│Keyword │ │Semantic│ │ Hybrid │ │ Cypher │
-│ Search │ │ Search │ │ Search │ │ Query  │
-│ (BM25) │ │(Vector)│ │  (RRF) │ │        │
-└────┬───┘ └────┬───┘ └────┬───┘ └────┬───┘
-     │          │          │          │
-     └──────────┴──────────┴──────────┘
-                    ▼
-         ┌──────────────────┐
-         │   Search APIs    │
-         └─────────┬────────┘
-              ┌────┴─────┬──────────┐
-              ▼          ▼          ▼
-          ┌────────┐ ┌────────┐ ┌────────┐
-          │  MCP   │ │  gRPC  │ │  Pipe  │
-          │ Server │ │ Server │ │ (WebUI)│
-          └────────┘ └────────┘ └────────┘
+Silverbullet Space → File Watcher → Space Parser → Embedding Service
+                                         ↓
+                                    LadybugDB
+                              (Graph + Vector Index)
+                                         ↓
+                    ┌────────────────────┼────────────────────┐
+                    ↓                    ↓                    ↓
+                MCP Server          gRPC Server          Open WebUI
+               (Port 8000)         (Port 50051)            Pipe
 ```
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs/deployment.md](docs/deployment.md) | Docker setup, compose files, production config |
+| [docs/mcp.md](docs/mcp.md) | MCP integration for various AI assistants |
+| [docs/grpc.md](docs/grpc.md) | gRPC client examples (Python, TypeScript, Rust, Go, C#) |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, testing, code quality |
+| [AGENTS.md](AGENTS.md) | Coding assistant instructions, architecture details |
 
 ## Graph Schema
 
-The knowledge graph captures relationships between pages, chunks, tags, folders, attributes, and data blocks.
+The knowledge graph includes these node types and relationships:
 
-### Node Types
+**Nodes**: `Chunk`, `Page`, `Tag`, `Folder`, `Attribute`, `DataBlock`
 
-| Node | Properties | Description |
-|------|-----------|-------------|
-| **Chunk** | `id`, `file_path`, `header`, `content`, `frontmatter`, `embedding` | Content segments split by `##` headings |
-| **Page** | `name` | Silverbullet page (may not exist yet - "aspiring pages") |
-| **Tag** | `name` | Tags from `#hashtags` or frontmatter `tags:` |
-| **Folder** | `path`, `name`, `has_index_page` | Directory structure |
-| **Attribute** | `id`, `name`, `value` | Inline attributes `[name: value]` |
-| **DataBlock** | `id`, `tag`, `data`, `file_path` | YAML data blocks ` ```#tagname ` |
+**Relationships**:
+- `LINKS_TO`: Wikilinks `[[page]]`
+- `EMBEDS`: Transclusions `![[page]]`
+- `TAGGED`: Hashtags and frontmatter tags
+- `IN_FOLDER`, `CONTAINS`: Folder hierarchy
+- `HAS_ATTRIBUTE`, `HAS_DATA_BLOCK`, `DATA_TAGGED`: Silverbullet v2 features
 
-### Relationships
-
-| Relationship | From → To | Properties | Description |
-|-------------|-----------|------------|-------------|
-| `LINKS_TO` | Chunk → Page | - | Wikilinks `[[page]]` |
-| `EMBEDS` | Chunk → Page | `header` | Transclusions `![[page]]` or `![[page#section]]` |
-| `TAGGED` | Chunk → Tag | - | Hashtags and frontmatter tags |
-| `IN_FOLDER` | Chunk → Folder | - | Chunk location in folder hierarchy |
-| `CONTAINS` | Folder → Folder | - | Parent-child folder relationships |
-| `HAS_ATTRIBUTE` | Chunk → Attribute | - | Inline attribute associations |
-| `HAS_DATA_BLOCK` | Chunk → DataBlock | - | Data block associations |
-| `DATA_TAGGED` | DataBlock → Tag | - | Data block tag (from ` ```#tagname `) |
-
-### Example Cypher Queries
-
-```cypher
--- Find all pages that embed (transclude) a specific page
-MATCH (c:Chunk)-[:EMBEDS]->(p:Page {name: "SharedComponent"})
-RETURN c.file_path, c.header
-
--- Find chunks with specific inline attributes
-MATCH (c:Chunk)-[:HAS_ATTRIBUTE]->(a:Attribute {name: "status"})
-WHERE a.value = "done"
-RETURN c.file_path, c.content
-
--- Find all data blocks of a specific type
-MATCH (d:DataBlock {tag: "person"})
-RETURN d.data, d.file_path
-
--- Find pages sharing the same tag
-MATCH (c1:Chunk)-[:TAGGED]->(t:Tag)<-[:TAGGED]-(c2:Chunk)
-WHERE c1 <> c2
-RETURN DISTINCT c1.file_path, c2.file_path, t.name
-```
-
-## Silverbullet v2 Features
-
-The parser supports key Silverbullet v2 constructs:
-
-### Transclusions
-
-Embed content from other pages:
-
-```markdown
-![[OtherPage]]           <!-- Embeds entire page -->
-![[OtherPage#Section]]   <!-- Embeds specific section -->
-```
-
-Transclusions are:
-- **Expanded** at parse time (content inlined for search/embeddings)
-- **Tracked** as `EMBEDS` relationships in the graph
-- **Protected** against circular references (max depth: 5)
-
-### Inline Attributes
-
-Add metadata to any content:
-
-```markdown
-- Task item [status: done] [priority: high]
-- Meeting notes [date: 2024-01-15] [attendees: Alice, Bob]
-```
-
-Attributes are:
-- Extracted and stored as `Attribute` nodes
-- Queryable via Cypher for structured data retrieval
-- Not confused with markdown links `[text](url)`
-
-### Data Blocks
-
-Define structured data with tagged YAML blocks:
-
-~~~markdown
-```#person
-name: John Doe
-email: john@example.com
-role: Developer
-```
-~~~
-
-Data blocks are:
-- Parsed as YAML and stored in `DataBlock` nodes
-- Tagged for easy querying (`DATA_TAGGED` relationship)
-- Ideal for contact lists, project metadata, configurations
-
-### Content Not Captured
-
-Some Silverbullet v2 features generate content dynamically at render time and are **not** captured:
-
-- **Space-Lua expressions**: `${expression}` - computed values
-- **Query results**: `${query[[...]]}` - dynamic tables
-- **Templates**: `template.each()` - generated content
-- **Widgets**: `${widget.new{...}}` - rendered UI elements
-
-These are intentionally excluded because:
-1. They aggregate/display existing data (which we index at the source)
-2. Evaluating Space-Lua would require a full interpreter
-3. The underlying data is already in the graph
-
-## Search Capabilities
-
-### BM25 Keyword Search
-
-Professional-grade keyword search with:
-- **Tag boosting**: 2x weight for matches in tags
-- **Technical term detection**: 1.5x weight for terms like `api`, `database`, `query`
-- **Header boosting**: 2x weight for matches in headings
-- **Multi-term queries**: Searches for any term, ranks by combined score
-
-```python
-results = db.keyword_search("database optimization")
-# Returns [{col0: chunk_data, bm25_score: 2.45}, ...]
-```
-
-### Semantic Search
-
-AI-powered search using OpenAI embeddings:
-- **Model**: `text-embedding-3-small` (1536 dimensions)
-- **Index**: HNSW with cosine similarity
-- **Content cleaning**: Removes Silverbullet syntax before embedding
-
-```python
-results = db.semantic_search(
-    query="How do I configure authentication?",
-    limit=10,
-    filter_tags=["config"]
-)
-```
-
-### Hybrid Search
-
-Combines keyword and semantic search for best results:
-- **RRF (Reciprocal Rank Fusion)**: Merges rankings without score normalization
-- **Weighted fusion**: Configurable keyword/semantic weights
-- **Deduplication**: Same chunk from both methods appears once
-
-```python
-from server.search import HybridSearch
-
-hybrid = HybridSearch(db)
-results = hybrid.search(
-    query="database optimization",
-    fusion_method="rrf",  # or "weighted"
-    semantic_weight=0.7,
-    keyword_weight=0.3
-)
-```
-
-## Testing
-
-All core functionality is tested using TDD (Test-Driven Development):
-
-```bash
-# Run all tests
-poetry run pytest tests/ -v
-
-# Run with coverage
-poetry run pytest tests/ --cov=server --cov-report=term-missing
-
-# Run specific test suites
-poetry run pytest tests/test_embeddings.py -v        # Embedding service
-poetry run pytest tests/test_semantic_search.py -v   # Vector search
-poetry run pytest tests/test_security.py -v          # Security
-```
-
-**Test Results**:
-- **119+ tests** covering all features
-- Comprehensive coverage for: parsing, graph operations, search (BM25, semantic, hybrid)
-- Silverbullet v2 features: 22 tests for transclusions, attributes, data blocks
-- Comprehensive mocking for OpenAI API (fast, no API calls in tests)
+See [AGENTS.md](AGENTS.md) for detailed schema and example Cypher queries.
 
 ## Security
 
-✅ **Cypher Injection Protection**: All queries use parameterized statements
-✅ **Path Traversal Protection**: File operations validate paths
-✅ **Input Validation**: Handles edge cases, unicode, special characters
+- Cypher injection protection (parameterized queries)
+- Path traversal protection
+- Input validation for unicode and special characters
+
+## License
+
+MIT

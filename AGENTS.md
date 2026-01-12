@@ -30,7 +30,7 @@ Silverbullet Space (markdown files)
 | ------------------ | ------------------------------- | ---------------------------------------------------------------- |
 | `SpaceParser`      | `server/parser/space_parser.py` | Parses markdown, extracts chunks, wikilinks, tags, transclusions |
 | `GraphDB`          | `server/db/graph.py`            | LadybugDB wrapper with Cypher, BM25, and vector search           |
-| `EmbeddingService` | `server/embeddings.py`          | OpenAI embedding generation and caching                          |
+| `EmbeddingService` | `server/embeddings.py`          | Embedding generation (OpenAI or local fastembed)                 |
 | `HybridSearch`     | `server/search/hybrid.py`       | Combines keyword + semantic search with RRF                      |
 | `MCP Server`       | `server/mcp_http_server.py`     | FastMCP HTTP server with 7 tools                                 |
 | `gRPC Server`      | `server/grpc_server.py`         | Fast binary protocol for hooks                                   |
@@ -48,7 +48,7 @@ Silverbullet Space (markdown files)
 ### Testing
 
 - **Framework**: pytest with pytest-asyncio for async tests
-- **Mocking**: All OpenAI API calls must be mocked (see `conftest.py`)
+- **Local embeddings**: Tests use fastembed (local provider) to avoid API calls
 - **Coverage**: Maintain high coverage, especially for search and parsing
 - **TDD**: Write tests first when adding features
 
@@ -117,13 +117,14 @@ Current relationships:
 
 ## Environment Variables
 
-| Variable            | Default                  | Purpose                             |
-| ------------------- | ------------------------ | ----------------------------------- |
-| `SPACE_PATH`        | `/space`                 | Path to Silverbullet space          |
-| `DB_PATH`           | `/data/ladybug`          | Path to LadybugDB database          |
-| `OPENAI_API_KEY`    | (required)               | OpenAI API key for embeddings       |
-| `EMBEDDING_MODEL`   | `text-embedding-3-small` | OpenAI embedding model              |
-| `ENABLE_EMBEDDINGS` | `true`                   | Enable/disable embedding generation |
+| Variable            | Default                  | Purpose                                    |
+| ------------------- | ------------------------ | ------------------------------------------ |
+| `SPACE_PATH`        | `/space`                 | Path to Silverbullet space                 |
+| `DB_PATH`           | `/data/ladybug`          | Path to LadybugDB database                 |
+| `EMBEDDING_PROVIDER`| `openai`                 | Provider: `openai` or `local` (fastembed)  |
+| `OPENAI_API_KEY`    | (required for openai)    | OpenAI API key for embeddings              |
+| `EMBEDDING_MODEL`   | varies by provider       | Model name (provider-specific)             |
+| `ENABLE_EMBEDDINGS` | `true`                   | Enable/disable embedding generation        |
 
 ## Common Tasks
 

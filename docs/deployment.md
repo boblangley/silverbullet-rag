@@ -221,9 +221,25 @@ volumes:
 |----------|---------|-------------|
 | `SPACE_PATH` | `/space` | Path to Silverbullet space directory |
 | `DB_PATH` | `/data/ladybug` | Path to LadybugDB database directory |
-| `OPENAI_API_KEY` | (required) | OpenAI API key for embeddings |
-| `EMBEDDING_MODEL` | `text-embedding-3-small` | OpenAI embedding model to use |
+| `EMBEDDING_PROVIDER` | `openai` | Embedding provider: `openai` or `local` |
+| `OPENAI_API_KEY` | (required for openai) | OpenAI API key for embeddings |
+| `EMBEDDING_MODEL` | varies by provider | Embedding model to use |
 | `ENABLE_EMBEDDINGS` | `true` | Set to `false` to disable embeddings |
+
+### Embedding Providers
+
+**OpenAI** (default):
+```bash
+EMBEDDING_PROVIDER=openai
+OPENAI_API_KEY=sk-your-key
+EMBEDDING_MODEL=text-embedding-3-small  # default
+```
+
+**Local (fastembed)** - no API key required:
+```bash
+EMBEDDING_PROVIDER=local
+EMBEDDING_MODEL=BAAI/bge-small-en-v1.5  # default
+```
 
 ### init_index Options
 
