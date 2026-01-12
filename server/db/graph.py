@@ -1,6 +1,7 @@
 """Graph database operations using LadybugDB."""
 
 import json
+from datetime import date, datetime
 from typing import List, Dict, Any, Optional
 import real_ladybug as lb
 from ..parser import Chunk, Transclusion, InlineAttribute, DataBlock
@@ -8,6 +9,17 @@ from ..embeddings import EmbeddingService
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles date and datetime objects."""
+
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        elif isinstance(obj, date):
+            return obj.isoformat()
+        return super().default(obj)
 
 
 class GraphDB:
@@ -144,8 +156,8 @@ class GraphDB:
             # Create chunk node
             chunk_id = f"{chunk.file_path}#{chunk.header}"
 
-            # Serialize frontmatter to JSON string
-            frontmatter_json = json.dumps(chunk.frontmatter) if chunk.frontmatter else "{}"
+            # Serialize frontmatter to JSON string (with date handling)
+            frontmatter_json = json.dumps(chunk.frontmatter, cls=DateTimeEncoder) if chunk.frontmatter else "{}"
 
             # Build query based on whether embeddings are enabled
             if self.enable_embeddings and embeddings:
@@ -254,7 +266,7 @@ class GraphDB:
             if hasattr(chunk, 'data_blocks') and chunk.data_blocks:
                 for idx, data_block in enumerate(chunk.data_blocks):
                     block_id = f"{chunk_id}#datablock#{idx}"
-                    data_json = json.dumps(data_block.data)
+                    data_json = json.dumps(data_block.data, cls=DateTimeEncoder)
                     block_query = """
                     MATCH (c:Chunk {id: $chunk_id})
                     MERGE (d:DataBlock {id: $block_id})

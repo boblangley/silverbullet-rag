@@ -105,5 +105,5 @@ def env_setup(monkeypatch):
     Args:
         monkeypatch: Pytest monkeypatch fixture
     """
-    monkeypatch.setenv("OPEN_AI_API_KEY", "test-key-12345")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key-12345")
     monkeypatch.setenv("EMBEDDING_MODEL", "text-embedding-3-small")

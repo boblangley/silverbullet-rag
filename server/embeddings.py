@@ -23,15 +23,15 @@ class EmbeddingService:
         Initialize the embedding service.
 
         Args:
-            api_key: OpenAI API key (defaults to OPEN_AI_API_KEY env var)
+            api_key: OpenAI API key (defaults to OPENAI_API_KEY env var)
             model: Embedding model to use (defaults to EMBEDDING_MODEL env var)
         """
-        self.api_key = api_key or os.getenv("OPEN_AI_API_KEY")
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.model = model or os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 
         if not self.api_key:
             raise ValueError(
-                "OpenAI API key not provided. Set OPEN_AI_API_KEY environment variable "
+                "OpenAI API key not provided. Set OPENAI_API_KEY environment variable "
                 "or pass api_key parameter."
             )
 

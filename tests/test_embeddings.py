@@ -17,14 +17,14 @@ class TestEmbeddingService:
 
     def test_initialization_with_params(self, monkeypatch):
         """Test that EmbeddingService can be initialized with parameters."""
-        monkeypatch.delenv("OPEN_AI_API_KEY", raising=False)
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         service = EmbeddingService(api_key="custom-key", model="custom-model")
         assert service.api_key == "custom-key"
         assert service.model == "custom-model"
 
     def test_initialization_without_api_key(self, monkeypatch):
         """Test that initialization fails without API key."""
-        monkeypatch.delenv("OPEN_AI_API_KEY", raising=False)
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         with pytest.raises(ValueError, match="OpenAI API key not provided"):
             EmbeddingService()
 
