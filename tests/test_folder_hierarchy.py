@@ -14,6 +14,18 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+# Check if MCP module is available
+try:
+    import mcp
+
+    MCP_AVAILABLE = True
+except ImportError:
+    MCP_AVAILABLE = False
+
+requires_mcp = pytest.mark.skipif(
+    not MCP_AVAILABLE, reason="MCP module not available (install mcp package)"
+)
+
 
 class TestFolderNodesInGraph:
     """Test Folder node creation and relationships in GraphDB."""
@@ -384,6 +396,7 @@ Body with #duplicate tag.
         assert chunk.tags.count("duplicate") == 1
 
 
+@requires_mcp
 class TestGetProjectContextTool:
     """Test the get_project_context MCP tool."""
 
@@ -611,6 +624,7 @@ class TestScopedSearch:
             chunk = result.get("col0", {})
             assert chunk.get("folder_path", "").startswith("Area/Health")
 
+    @requires_mcp
     @pytest.mark.asyncio
     async def test_hybrid_search_tool_with_scope(self, temp_space_path, monkeypatch):
         """hybrid_search_tool should accept scope parameter."""

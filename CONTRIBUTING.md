@@ -90,6 +90,97 @@ poetry run pytest tests/test_v2_features.py::TestTransclusionParsing::test_extra
 poetry run pytest -k "transclusion" -v
 ```
 
+### Integration Tests
+
+Some tests require running servers and are skipped by default. To run them, set `RUN_INTEGRATION_TESTS=true`.
+
+#### Using Docker Compose Script (Recommended)
+
+The easiest way to run integration tests is using the provided script:
+
+```bash
+# Run all integration tests
+./scripts/run-integration-tests.sh
+
+# Run only MCP HTTP tests
+./scripts/run-integration-tests.sh --mcp
+
+# Run only gRPC tests
+./scripts/run-integration-tests.sh --grpc
+
+# Keep containers running after tests (for debugging)
+./scripts/run-integration-tests.sh --keep
+```
+
+The script automatically:
+- Builds Docker images
+- Copies test data to volumes
+- Starts MCP and gRPC servers
+- Waits for servers to be ready
+- Runs integration tests
+- Saves JUnit XML results to `test-results/integration-results.xml`
+- Cleans up containers and volumes
+
+You can also run with Docker Compose directly:
+
+```bash
+# Build and start services
+docker compose -f docker-compose.test.yml build
+docker compose -f docker-compose.test.yml up -d mcp-server grpc-server
+
+# Wait for servers (~60 seconds for embedding model download)
+sleep 60
+
+# Run tests
+docker compose -f docker-compose.test.yml run --rm \
+  -e RUN_INTEGRATION_TESTS=true \
+  test-runner \
+  python -m pytest tests/test_mcp_http.py tests/test_grpc_server.py -v
+
+# Cleanup
+docker compose -f docker-compose.test.yml down -v
+```
+
+#### Using Local Servers
+
+Alternatively, run servers locally in separate terminals:
+
+```bash
+# Terminal 1: Start the MCP HTTP server
+export SPACE_PATH=/path/to/your/silverbullet/space
+export DB_PATH=/tmp/test-ladybug.db
+export EMBEDDING_PROVIDER=local
+python -m server.mcp_http_server
+
+# Terminal 2: Run MCP integration tests
+RUN_INTEGRATION_TESTS=true pytest tests/test_mcp_http.py -v
+```
+
+```bash
+# Terminal 1: Start the gRPC server
+export SPACE_PATH=/path/to/your/silverbullet/space
+export DB_PATH=/tmp/test-ladybug.db
+export EMBEDDING_PROVIDER=local
+python -m server.grpc_server
+
+# Terminal 2: Run gRPC integration tests
+RUN_INTEGRATION_TESTS=true pytest tests/test_grpc_server.py -v
+```
+
+#### OpenAI Embedding Tests
+
+Tests that require real OpenAI API calls are skipped unless explicitly enabled:
+
+```bash
+# Set environment variables
+export OPENAI_API_KEY="sk-your-actual-key"
+export RUN_OPENAI_TESTS=true
+
+# Run OpenAI-specific tests
+pytest tests/test_embeddings.py -v -k "OpenAI"
+pytest tests/test_semantic_search.py::TestSemanticSearchIntegration -v
+```
+
 ### Test Configuration
 
 Tests are configured to:

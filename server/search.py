@@ -89,7 +89,7 @@ class HybridSearch:
         # Fuse results using selected method
         if fusion_method == "rrf":
             fused_results = self._reciprocal_rank_fusion(
-                keyword_results, semantic_results, limit
+                keyword_results, semantic_results, limit * 2  # Get more for filtering
             )
         else:  # weighted
             fused_results = self._weighted_fusion(
@@ -97,10 +97,19 @@ class HybridSearch:
                 semantic_results,
                 semantic_weight,
                 keyword_weight,
-                limit,
+                limit * 2,  # Get more for filtering
             )
 
-        return fused_results
+        # Apply post-fusion tag filtering if specified
+        # This ensures keyword results also respect the tag filter
+        if filter_tags:
+            fused_results = self._filter_by_tags(fused_results, filter_tags)
+
+        # Apply post-fusion page filtering if specified
+        if filter_pages:
+            fused_results = self._filter_by_pages(fused_results, filter_pages)
+
+        return fused_results[:limit]
 
     def _reciprocal_rank_fusion(
         self,
@@ -313,3 +322,58 @@ class HybridSearch:
                 )
 
         return formatted
+
+    def _filter_by_tags(
+        self, results: List[Dict[str, Any]], filter_tags: List[str]
+    ) -> List[Dict[str, Any]]:
+        """Filter results to only include chunks with specified tags.
+
+        Args:
+            results: List of hybrid search results
+            filter_tags: List of required tag names
+
+        Returns:
+            Filtered results where each chunk has at least one of the specified tags
+        """
+        filtered = []
+        for result in results:
+            chunk = result.get("chunk", {})
+            chunk_id = chunk.get("id", "")
+            if not chunk_id:
+                continue
+
+            # Query the graph for this chunk's tags
+            tag_query = """
+            MATCH (c:Chunk {id: $chunk_id})-[:TAGGED]->(t:Tag)
+            RETURN t.name as tag
+            """
+            tags = self.graph_db.cypher_query(tag_query, {"chunk_id": chunk_id})
+            chunk_tags = {t.get("col0", "") for t in tags}
+
+            # Check if chunk has any of the required tags
+            if any(tag in chunk_tags for tag in filter_tags):
+                filtered.append(result)
+
+        return filtered
+
+    def _filter_by_pages(
+        self, results: List[Dict[str, Any]], filter_pages: List[str]
+    ) -> List[Dict[str, Any]]:
+        """Filter results to only include chunks from specified pages.
+
+        Args:
+            results: List of hybrid search results
+            filter_pages: List of allowed page paths
+
+        Returns:
+            Filtered results where each chunk's file_path is in the allowed list
+        """
+        filtered = []
+        for result in results:
+            chunk = result.get("chunk", {})
+            file_path = chunk.get("file_path", "")
+
+            if file_path in filter_pages:
+                filtered.append(result)
+
+        return filtered

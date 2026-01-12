@@ -1,0 +1,64 @@
+# Docker Compose configuration for running integration tests
+# Usage: ./scripts/run-integration-tests.sh
+
+services:
+  # MCP HTTP Server
+  mcp-server:
+    build: .
+    command: python -m server.mcp_http_server
+    environment:
+      - SPACE_PATH=/space
+      - DB_PATH=/data/ladybug.db
+      - EMBEDDING_PROVIDER=local
+      - EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+    volumes:
+      - test-space:/space:ro
+      - test-db:/data
+    networks:
+      - test-network
+
+  # gRPC Server
+  grpc-server:
+    build: .
+    command: python -m server.grpc_server
+    environment:
+      - SPACE_PATH=/space
+      - DB_PATH=/data/ladybug.db
+      - EMBEDDING_PROVIDER=local
+      - EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+    volumes:
+      - test-space:/space:ro
+      - test-db:/data
+    depends_on:
+      mcp-server:
+        condition: service_started
+    networks:
+      - test-network
+
+  # Test runner container
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      - MCP_SERVER_URL=http://mcp-server:8000
+      - GRPC_SERVER_ADDRESS=grpc-server:50051
+      - RUN_INTEGRATION_TESTS=true
+    volumes:
+      - test-results:/app/test-results
+    depends_on:
+      mcp-server:
+        condition: service_started
+      grpc-server:
+        condition: service_started
+    networks:
+      - test-network
+
+volumes:
+  test-space:
+  test-db:
+  test-results:
+
+networks:
+  test-network:
+    driver: bridge

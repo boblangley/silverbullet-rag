@@ -9,6 +9,19 @@ from pathlib import Path
 from server.db import GraphDB
 from server.parser import SpaceParser, Chunk
 
+# Check if watchdog module is available
+try:
+    import watchdog
+
+    WATCHDOG_AVAILABLE = True
+except ImportError:
+    WATCHDOG_AVAILABLE = False
+
+requires_watchdog = pytest.mark.skipif(
+    not WATCHDOG_AVAILABLE,
+    reason="watchdog module not available (install watchdog package)",
+)
+
 
 class TestGraphDeletion:
     """Test suite for graph deletion functionality."""
@@ -184,6 +197,7 @@ Standalone content with #tag3 #shared.
         # Should not raise an exception
         graph_db.delete_chunks_by_file("/nonexistent/file.md")
 
+    @requires_watchdog
     def test_watcher_calls_delete_on_file_deletion(self, temp_space_path, temp_db_path):
         """RED: Test that file watcher calls delete_chunks_by_file on deletion.
 

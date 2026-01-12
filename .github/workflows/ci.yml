@@ -47,8 +47,6 @@ jobs:
           EMBEDDING_MODEL: BAAI/bge-small-en-v1.5
         run: |
           python -m pytest tests/ -v \
-            --ignore=tests/test_grpc_server.py \
-            --ignore=tests/test_mcp_http.py \
             --tb=short
 
       - name: Run tests with OpenAI (if secret available)

@@ -88,9 +88,10 @@ class TestSemanticSearch:
         query = call_args[0][0]
         params = call_args[0][1]
 
-        assert "QUERY_VECTOR_INDEX" in query
-        assert "chunk_embedding_idx" in query
-        assert params["query_embedding"] == mock_embedding
+        # Verify the query uses ARRAY_COSINE_SIMILARITY for vector search
+        assert "ARRAY_COSINE_SIMILARITY" in query
+        assert "c.embedding" in query
+        # The embedding is now inlined in the query, not passed as a parameter
         assert params["limit"] == 10
 
     @patch("server.db.graph.EmbeddingService")
@@ -161,9 +162,10 @@ class TestSemanticSearch:
 
         # Simulate two results
         mock_result.has_next.side_effect = [True, True, False]
+        # Mock returns [chunk_node, similarity_score] tuples
         mock_result.get_next.side_effect = [
-            ["chunk1", "content1"],
-            ["chunk2", "content2"],
+            [{"id": "chunk1", "content": "content1"}, 0.95],
+            [{"id": "chunk2", "content": "content2"}, 0.85],
         ]
         mock_conn_instance.execute.return_value = mock_result
         mock_connection.return_value = mock_conn_instance
@@ -172,8 +174,8 @@ class TestSemanticSearch:
         results = db.semantic_search("test query", limit=10)
 
         assert len(results) == 2
-        assert "col0" in results[0]
-        assert "col1" in results[0]
+        assert "col0" in results[0]  # chunk data
+        assert "similarity" in results[0]  # similarity score
 
     @patch("server.db.graph.EmbeddingService")
     def test_index_chunks_generates_embeddings(

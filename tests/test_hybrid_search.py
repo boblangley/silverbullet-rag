@@ -22,8 +22,10 @@ def diverse_docs_for_hybrid(temp_space_path: str) -> Path:
     # Document 1: Exact keyword match but semantically less relevant
     doc1 = space / "fruit_database.md"
     doc1.write_text(
-        """# Fruit Database
-tags: #food #nutrition
+        """---
+tags: [food, nutrition]
+---
+# Fruit Database
 
 ## Fruit Information
 
@@ -35,8 +37,10 @@ entries for apples, oranges, and bananas.
     # Document 2: Semantically relevant but fewer keyword matches
     doc2 = space / "data_storage_systems.md"
     doc2.write_text(
-        """# Data Storage Systems
-tags: #technology #architecture
+        """---
+tags: [technology, architecture]
+---
+# Data Storage Systems
 
 ## Modern Storage Solutions
 
@@ -49,8 +53,10 @@ These systems handle information efficiently and scale horizontally.
     # Document 3: Both keyword and semantic relevance
     doc3 = space / "database_architecture.md"
     doc3.write_text(
-        """# Database Architecture
-tags: #database #system-design
+        """---
+tags: [database, system-design]
+---
+# Database Architecture
 
 ## Database Design Patterns
 
@@ -63,8 +69,10 @@ building scalable database applications.
     # Document 4: Different topic entirely
     doc4 = space / "cooking_recipes.md"
     doc4.write_text(
-        """# Cooking Recipes
-tags: #cooking #recipes
+        """---
+tags: [cooking, recipes]
+---
+# Cooking Recipes
 
 ## Italian Cuisine
 
@@ -301,7 +309,13 @@ def test_hybrid_search_empty_query(temp_db_path: str, diverse_docs_for_hybrid: P
 
 
 def test_hybrid_search_no_results(temp_db_path: str, diverse_docs_for_hybrid: Path):
-    """Test hybrid search handles queries with no matching results."""
+    """Test hybrid search handles queries with no keyword matches gracefully.
+
+    Note: Semantic search will still return results (based on similarity scores)
+    even for queries that don't match any keywords. This is expected behavior.
+    This test verifies that when keyword search has no matches, hybrid search
+    still returns reasonable results with low keyword scores.
+    """
     # Arrange
     graph_db = GraphDB(temp_db_path, enable_embeddings=True)
     parser = SpaceParser()
@@ -313,8 +327,12 @@ def test_hybrid_search_no_results(temp_db_path: str, diverse_docs_for_hybrid: Pa
     # Act
     results = hybrid_search.search(query="quantum_physics_xyz_nonexistent", limit=10)
 
-    # Assert
-    assert len(results) == 0, "Should return empty list when no results match"
+    # Assert - semantic search will return results but keyword scores should be 0
+    # since no documents contain the exact query terms
+    for result in results:
+        assert (
+            result["keyword_score"] == 0.0
+        ), "No keyword matches expected for nonexistent terms"
 
 
 def test_hybrid_search_limit_parameter(

@@ -150,20 +150,15 @@ class GraphDB:
             logger.debug(f"Schema initialization note: {e}")
 
     def _create_vector_index(self) -> None:
-        """Create HNSW vector index for semantic search."""
-        try:
-            conn = lb.Connection(self.db)
-            # Create HNSW vector index on Chunk.embedding with cosine similarity
-            conn.execute(
-                """
-                CREATE VECTOR INDEX IF NOT EXISTS chunk_embedding_idx
-                ON Chunk(embedding)
-                WITH {metric: 'cosine', M: 16, efConstruction: 200}
-            """
-            )
-            logger.info("Vector index created successfully")
-        except Exception as e:
-            logger.warning(f"Vector index may already exist: {e}")
+        """Placeholder for vector index creation.
+
+        Note: real-ladybug 0.14.x uses ARRAY_COSINE_SIMILARITY for vector search
+        rather than dedicated vector indexes. The embedding FLOAT[] column is
+        sufficient for vector operations.
+        """
+        # Vector search in real-ladybug uses ARRAY_COSINE_SIMILARITY function
+        # directly on FLOAT[] columns, no explicit index creation needed
+        logger.info("Vector search will use ARRAY_COSINE_SIMILARITY on embeddings")
 
     def index_chunks(self, chunks: List[Chunk]) -> None:
         """Index chunks into the graph database.
@@ -713,6 +708,8 @@ class GraphDB:
     ) -> List[Dict[str, Any]]:
         """Perform semantic search using vector similarity.
 
+        Uses ARRAY_COSINE_SIMILARITY function for vector comparison.
+
         Args:
             query: Natural language query to search for
             limit: Maximum number of results to return (default: 10)
@@ -735,91 +732,60 @@ class GraphDB:
 
         conn = lb.Connection(self.db)
 
-        # Build the vector search query
-        if filter_tags or filter_pages or scope:
-            # Use PROJECT_GRAPH_CYPHER for filtered search
-            # First get candidates via vector search, then filter with Cypher
-            base_query = """
-            QUERY_VECTOR_INDEX chunk_embedding_idx
-            WITH VECTOR $query_embedding
-            LIMIT $limit
-            """
+        # Build filter conditions
+        filter_conditions = ["c.embedding IS NOT NULL"]
+        params: Dict[str, Any] = {
+            "limit": limit,
+        }
 
-            # Get vector search results
-            vector_results = conn.execute(
-                base_query,
-                {
-                    "query_embedding": query_embedding,
-                    "limit": limit * 2,  # Get more candidates for filtering
-                },
+        if filter_tags:
+            # For tag filtering, we need a subquery approach
+            filter_conditions.append(
+                "EXISTS { MATCH (c)-[:TAGGED]->(t:Tag) WHERE t.name IN $tags }"
             )
+            params["tags"] = filter_tags
 
-            # Extract chunk IDs from vector results
-            chunk_ids = []
-            while vector_results.has_next():
-                record = vector_results.get_next()
-                chunk_ids.append(record[0])  # Assuming first column is chunk ID
+        if filter_pages:
+            filter_conditions.append("c.file_path IN $pages")
+            params["pages"] = filter_pages
 
-            if not chunk_ids:
-                return []
-
-            # Build Cypher filter query
-            filter_conditions = []
-            if filter_tags:
-                filter_conditions.append(
-                    "EXISTS((c)-[:TAGGED]->(:Tag)) AND ANY(t IN $tags WHERE (c)-[:TAGGED]->(:Tag {name: t}))"
-                )
-            if filter_pages:
-                filter_conditions.append("c.file_path IN $pages")
-            if scope:
-                filter_conditions.append(
-                    "EXISTS((c)-[:IN_FOLDER]->(f:Folder) WHERE f.path = $scope OR f.path STARTS WITH $scope_prefix)"
-                )
-
-            filter_clause = (
-                " AND ".join(filter_conditions) if filter_conditions else "TRUE"
+        if scope:
+            filter_conditions.append(
+                "EXISTS { MATCH (c)-[:IN_FOLDER]->(f:Folder) WHERE f.path = $scope OR f.path STARTS WITH $scope_prefix }"
             )
+            params["scope"] = scope
+            params["scope_prefix"] = scope + "/"
 
-            filtered_query = (
-                "MATCH (c:Chunk) "
-                + "WHERE c.id IN $chunk_ids AND "
-                + filter_clause
-                + " "
-                + "RETURN c "
-                + "LIMIT $limit"
-            )
+        filter_clause = " AND ".join(filter_conditions)
 
-            result = conn.execute(
-                filtered_query,
-                {
-                    "chunk_ids": chunk_ids,
-                    "tags": filter_tags or [],
-                    "pages": filter_pages or [],
-                    "scope": scope or "",
-                    "scope_prefix": (scope + "/") if scope else "",
-                    "limit": limit,
-                },
-            )
-        else:
-            # Simple vector search without filters
-            vector_query = """
-            QUERY_VECTOR_INDEX chunk_embedding_idx
-            WITH VECTOR $query_embedding
-            LIMIT $limit
-            """
+        # Convert embedding to inline array literal
+        # LadybugDB's ARRAY_COSINE_SIMILARITY requires at least one ARRAY argument,
+        # but Python list parameters are passed as LIST type. Using inline literal works.
+        embedding_literal = "[" + ",".join(str(x) for x in query_embedding) + "]"
 
-            result = conn.execute(
-                vector_query, {"query_embedding": query_embedding, "limit": limit}
-            )
+        # Use ARRAY_COSINE_SIMILARITY for vector search
+        # This function is available in real-ladybug 0.14.x
+        vector_query = (
+            "MATCH (c:Chunk) "
+            + "WHERE "
+            + filter_clause
+            + " "
+            + "RETURN c, ARRAY_COSINE_SIMILARITY(c.embedding, "
+            + embedding_literal
+            + ") AS similarity "
+            + "ORDER BY similarity DESC "
+            + "LIMIT $limit"
+        )
+
+        result = conn.execute(vector_query, params)
 
         # Process results
         records = []
         while result.has_next():
             record = result.get_next()
-            record_dict = {}
-            for i, value in enumerate(record):
-                record_dict[f"col{i}"] = self._convert_value(value)
-            records.append(record_dict)
+            chunk = self._convert_value(record[0])
+            similarity = record[1] if len(record) > 1 else 0.0
+            records.append({"col0": chunk, "similarity": similarity})
 
         logger.info(f"Semantic search returned {len(records)} results")
         return records

@@ -4,9 +4,20 @@ Following TDD RED/GREEN/REFACTOR approach.
 These tests should FAIL initially since proto files aren't compiled.
 """
 
+import os
 import pytest
 import grpc
 from pathlib import Path
+
+
+# Allow overriding the gRPC server address for Docker integration tests
+GRPC_SERVER_ADDRESS = os.environ.get("GRPC_SERVER_ADDRESS", "localhost:50051")
+
+# Skip integration tests unless explicitly enabled
+skip_integration = pytest.mark.skipif(
+    not os.environ.get("RUN_INTEGRATION_TESTS"),
+    reason="Integration tests skipped. Set RUN_INTEGRATION_TESTS=true to run.",
+)
 
 
 class TestGRPCServer:
@@ -124,45 +135,47 @@ class TestGRPCClientCalls:
     """Test actual RPC calls (requires running server)."""
 
     @pytest.fixture
-    def temp_test_db(self, temp_db_path, temp_space_path, sample_markdown_file):
-        """Setup test database with sample data.
+    def grpc_stub(self):
+        """Create a gRPC stub for testing against running server."""
+        from server.grpc import rag_pb2_grpc
 
-        Args:
-            temp_db_path: Temporary database directory
-            temp_space_path: Temporary space directory
-            sample_markdown_file: Sample markdown file fixture
+        channel = grpc.insecure_channel(GRPC_SERVER_ADDRESS)
+        stub = rag_pb2_grpc.RAGServiceStub(channel)
+        yield stub
+        channel.close()
 
-        Returns:
-            Tuple of (db_path, space_path)
-        """
-        return temp_db_path, temp_space_path
+    @skip_integration
+    def test_query_rpc_call(self, grpc_stub):
+        """Integration test: Execute Cypher query via gRPC."""
+        from server.grpc import rag_pb2
 
-    @pytest.mark.skip(
-        reason="Requires running gRPC server - will implement after GREEN phase"
-    )
-    def test_query_rpc_call(self, temp_test_db):
-        """RED: Test actual Query RPC call.
+        request = rag_pb2.QueryRequest(
+            cypher_query="MATCH (n:Chunk) RETURN count(n) as count"
+        )
+        response = grpc_stub.Query(request)
 
-        Skipped for now - will implement after server is working.
-        """
-        pass
+        assert response.success is True
+        assert response.results_json != ""
 
-    @pytest.mark.skip(
-        reason="Requires running gRPC server - will implement after GREEN phase"
-    )
-    def test_search_rpc_call(self, temp_test_db):
-        """RED: Test actual Search RPC call.
+    @skip_integration
+    def test_search_rpc_call(self, grpc_stub):
+        """Integration test: Execute keyword search via gRPC."""
+        from server.grpc import rag_pb2
 
-        Skipped for now - will implement after server is working.
-        """
-        pass
+        request = rag_pb2.SearchRequest(keyword="markdown")
+        response = grpc_stub.Search(request)
 
-    @pytest.mark.skip(
-        reason="Requires running gRPC server - will implement after GREEN phase"
-    )
-    def test_update_page_rpc_call(self, temp_test_db):
-        """RED: Test actual UpdatePage RPC call.
+        assert response.success is True
+        # Should return results for markdown content
+        assert response.results_json != ""
 
-        Skipped for now - will implement after server is working.
-        """
-        pass
+    @skip_integration
+    def test_query_invalid_cypher(self, grpc_stub):
+        """Integration test: Handle invalid Cypher query gracefully."""
+        from server.grpc import rag_pb2
+
+        request = rag_pb2.QueryRequest(cypher_query="INVALID CYPHER SYNTAX")
+        response = grpc_stub.Query(request)
+
+        # Should handle error gracefully
+        assert response.success is False or response.error != ""
