@@ -1,6 +1,7 @@
 """File watcher for automatic reindexing."""
 
 import hashlib
+import os
 import time
 import logging
 import threading
@@ -10,17 +11,23 @@ from watchdog.events import FileSystemEventHandler
 
 from .db import GraphDB
 from .parser import SpaceParser
+from .config_parser import parse_config_page, write_config_json
 
 
 class SpaceWatcher(FileSystemEventHandler):
     """Handle file system events in the Silverbullet space."""
 
     def __init__(
-        self, space_path: str, graph_db: GraphDB = None, parser: SpaceParser = None
+        self,
+        space_path: str,
+        graph_db: GraphDB = None,
+        parser: SpaceParser = None,
+        db_path: str = None,
     ):
         self.space_path = space_path
         self.graph_db = graph_db if graph_db else GraphDB("/db")
         self.parser = parser if parser else SpaceParser()
+        self.db_path = db_path or os.getenv("DB_PATH", "/data/ladybug")
         self.debounce_time = {}
         self.processing_lock = threading.Lock()
         self.currently_processing = set()
@@ -147,6 +154,24 @@ class SpaceWatcher(FileSystemEventHandler):
         except Exception as e:
             logging.error(f"Error deleting chunks: {e}")
 
+    def _handle_config_change(self, file_path: str) -> None:
+        """Parse CONFIG.md and write space_config.json.
+
+        This extracts config.set() values from space-lua blocks and writes
+        them to a JSON file that the MCP server can read.
+
+        Args:
+            file_path: Path to the CONFIG.md file
+        """
+        try:
+            content = Path(file_path).read_text(encoding="utf-8")
+            config = parse_config_page(content)
+            db_path = Path(self.db_path)
+            write_config_json(config, db_path)
+            logging.info(f"Updated space_config.json from {file_path}")
+        except Exception as e:
+            logging.error(f"Failed to parse CONFIG.md: {e}")
+
     def _reindex_file(self, file_path: str):
         """Reindex a single file instead of the entire space."""
         if not self._mark_processing(file_path):
@@ -154,6 +179,10 @@ class SpaceWatcher(FileSystemEventHandler):
             return
 
         try:
+            # Special handling for CONFIG.md - parse config values
+            if file_path.endswith("CONFIG.md"):
+                self._handle_config_change(file_path)
+
             # Delete existing chunks for this file
             self.graph_db.delete_chunks_by_file(file_path)
 
