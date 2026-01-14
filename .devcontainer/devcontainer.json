@@ -67,7 +67,6 @@
             "source.organizeImports.ruff": "explicit"
           }
         },
-        "ruff.lint.run": "onSave",
         "files.exclude": {
           "**/__pycache__": true,
           "**/*.pyc": true,
