@@ -63,3 +63,4 @@ Thumbs.db
 server/grpc/*_pb2.py
 server/grpc/*_pb2_grpc.py
 server/grpc/*_pb2.pyi
+.mcp.json
