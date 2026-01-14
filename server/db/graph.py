@@ -472,7 +472,7 @@ class GraphDB:
         conn.execute(cleanup_data_query)
 
     def keyword_search(
-        self, keyword: str, scope: Optional[str] = None
+        self, keyword: str, limit: int = 50, scope: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """Search for chunks by keyword with BM25 ranking.
 
@@ -483,6 +483,7 @@ class GraphDB:
 
         Args:
             keyword: Keyword or keywords to search for
+            limit: Maximum number of results to return (default: 50)
             scope: Optional folder path to scope results to (e.g., "Projects/ProjectA")
 
         Returns:
@@ -695,8 +696,9 @@ class GraphDB:
         # Sort by BM25 score (descending)
         scored_chunks.sort(key=lambda x: x["bm25_score"], reverse=True)
 
-        # Limit to top 50 results
-        return scored_chunks[:50]
+        # Limit results and strip embeddings to reduce response size
+        results = scored_chunks[:limit]
+        return self._strip_embeddings(results)
 
     def semantic_search(
         self,
@@ -788,7 +790,7 @@ class GraphDB:
             records.append({"col0": chunk, "similarity": similarity})
 
         logger.info(f"Semantic search returned {len(records)} results")
-        return records
+        return self._strip_embeddings(records)
 
     def _convert_value(self, value: Any) -> Any:
         """Convert LadybugDB value to Python type.
@@ -802,3 +804,21 @@ class GraphDB:
         # LadybugDB values are already Python-compatible
         # Add any necessary conversions here
         return value
+
+    def _strip_embeddings(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Strip embedding vectors from search results to reduce response size.
+
+        Embeddings are typically 1536 floats (~12KB per chunk) and are not useful
+        in search results for display purposes.
+
+        Args:
+            results: List of search results containing chunk data
+
+        Returns:
+            Results with embedding field removed from chunks
+        """
+        for result in results:
+            chunk = result.get("col0") or result.get("chunk")
+            if chunk and isinstance(chunk, dict) and "embedding" in chunk:
+                del chunk["embedding"]
+        return results

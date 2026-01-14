@@ -82,9 +82,11 @@ class HybridSearch:
 
         # If only one search type has results, return those
         if not semantic_results:
-            return self._format_results(keyword_results, keyword_only=True)[:limit]
+            results = self._format_results(keyword_results, keyword_only=True)[:limit]
+            return self._strip_embeddings(results)
         if not keyword_results:
-            return self._format_results(semantic_results, semantic_only=True)[:limit]
+            results = self._format_results(semantic_results, semantic_only=True)[:limit]
+            return self._strip_embeddings(results)
 
         # Fuse results using selected method
         if fusion_method == "rrf":
@@ -109,7 +111,9 @@ class HybridSearch:
         if filter_pages:
             fused_results = self._filter_by_pages(fused_results, filter_pages)
 
-        return fused_results[:limit]
+        # Strip embeddings from results to reduce response size
+        results = fused_results[:limit]
+        return self._strip_embeddings(results)
 
     def _reciprocal_rank_fusion(
         self,
@@ -377,3 +381,21 @@ class HybridSearch:
                 filtered.append(result)
 
         return filtered
+
+    def _strip_embeddings(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Strip embedding vectors from search results to reduce response size.
+
+        Embeddings are typically 1536 floats (~12KB per chunk) and are not useful
+        in search results for display purposes.
+
+        Args:
+            results: List of search results containing chunk data
+
+        Returns:
+            Results with embedding field removed from chunks
+        """
+        for result in results:
+            chunk = result.get("chunk", {})
+            if chunk and isinstance(chunk, dict) and "embedding" in chunk:
+                del chunk["embedding"]
+        return results
