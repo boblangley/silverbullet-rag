@@ -310,43 +310,7 @@ async def read_page(page_name: str) -> Dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
-# Tool 7: Update Page
-@mcp.tool()
-async def update_page(page_name: str, content: str) -> Dict[str, Any]:
-    """
-    Update or create a Silverbullet page.
-
-    Args:
-        page_name: Name of the page (e.g., 'MyPage.md')
-        content: New page content
-
-    Returns:
-        Success confirmation
-    """
-    try:
-        space_path = Path(os.getenv("SPACE_PATH", "/space"))
-        file_path = space_path / page_name
-
-        # Security check - prevent path traversal
-        if not file_path.resolve().is_relative_to(space_path.resolve()):
-            return {"success": False, "error": f"Invalid page name: {page_name}"}
-
-        # Create parent directories if needed
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # Write content
-        file_path.write_text(content, encoding="utf-8")
-
-        # File watcher will trigger reindexing automatically
-        logger.info(f"Updated page: {page_name}")
-
-        return {"success": True, "message": f"Page '{page_name}' updated successfully"}
-    except Exception as e:
-        logger.error(f"Failed to update page '{page_name}': {e}")
-        return {"success": False, "error": str(e)}
-
-
-# Tool 8: Propose Change
+# Tool 7: Propose Change
 @mcp.tool()
 async def propose_change(
     target_page: str,
@@ -418,7 +382,7 @@ async def propose_change(
         return {"success": False, "error": str(e)}
 
 
-# Tool 9: List Proposals
+# Tool 8: List Proposals
 @mcp.tool()
 async def list_proposals(status: str = "pending") -> Dict[str, Any]:
     """
@@ -448,7 +412,7 @@ async def list_proposals(status: str = "pending") -> Dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
-# Tool 10: Withdraw Proposal
+# Tool 9: Withdraw Proposal
 @mcp.tool()
 async def withdraw_proposal(proposal_path: str) -> Dict[str, Any]:
     """

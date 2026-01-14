@@ -9,7 +9,6 @@ import os
 import pytest
 import pytest_asyncio
 import httpx
-from pathlib import Path
 
 
 # Allow overriding the MCP server URL for Docker integration tests
@@ -52,7 +51,7 @@ class TestMCPHTTPServer:
 
     @pytest.mark.asyncio
     async def test_all_tools_registered(self):
-        """GREEN: Test that all 6 tools are registered with FastMCP.
+        """GREEN: Test that core tools are registered with FastMCP.
 
         This should PASS - verifies all tools are properly decorated.
         """
@@ -62,7 +61,9 @@ class TestMCPHTTPServer:
             semantic_search,
             hybrid_search_tool,
             read_page,
-            update_page,
+            propose_change,
+            list_proposals,
+            withdraw_proposal,
         )
 
         # All tools should be callable
@@ -71,7 +72,9 @@ class TestMCPHTTPServer:
         assert callable(semantic_search)
         assert callable(hybrid_search_tool)
         assert callable(read_page)
-        assert callable(update_page)
+        assert callable(propose_change)
+        assert callable(list_proposals)
+        assert callable(withdraw_proposal)
 
     @pytest.mark.asyncio
     async def test_cypher_query_tool_directly(self, temp_db_path, temp_space_path):
@@ -149,24 +152,29 @@ class TestMCPHTTPServer:
         assert "not found" in result["error"].lower()
 
     @pytest.mark.asyncio
-    async def test_update_page_tool_directly(self, temp_space_path, monkeypatch):
-        """GREEN: Test update_page tool function directly.
+    async def test_propose_change_tool_disabled(self, temp_space_path, monkeypatch):
+        """GREEN: Test propose_change returns error when library not installed.
 
-        This should PASS - tests tool logic without server.
+        This should PASS - proposal tools disabled without AI-Proposals library.
         """
-        from server.mcp_http_server import update_page
+        from server.mcp_http_server import propose_change
+        import server.mcp_http_server as mcp_module
 
         # Set SPACE_PATH environment variable
         monkeypatch.setenv("SPACE_PATH", temp_space_path)
 
-        # Test creating new page
-        result = await update_page("new_test.md", "# New Test\n\nContent here")
-        assert result["success"] is True
+        # Ensure proposals are disabled (no library installed)
+        mcp_module.proposals_enabled = False
 
-        # Verify file was created
-        file_path = Path(temp_space_path) / "new_test.md"
-        assert file_path.exists()
-        assert "New Test" in file_path.read_text()
+        # Test proposing a change
+        result = await propose_change(
+            target_page="test.md",
+            content="# Test",
+            title="Test proposal",
+            description="Testing",
+        )
+        assert result["success"] is False
+        assert "not installed" in result["error"]
 
     @pytest.mark.asyncio
     async def test_path_traversal_protection_read(self, temp_space_path, monkeypatch):
@@ -185,18 +193,30 @@ class TestMCPHTTPServer:
         assert "Invalid page name" in result["error"]
 
     @pytest.mark.asyncio
-    async def test_path_traversal_protection_write(self, temp_space_path, monkeypatch):
-        """GREEN: Test path traversal attack protection in update_page.
+    async def test_path_traversal_protection_propose(
+        self, temp_space_path, temp_db_path, monkeypatch
+    ):
+        """GREEN: Test path traversal attack protection in propose_change.
 
         This should PASS - security check.
         """
-        from server.mcp_http_server import update_page
+        from server.mcp_http_server import propose_change
+        import server.mcp_http_server as mcp_module
 
-        # Set SPACE_PATH environment variable
+        # Set environment variables
         monkeypatch.setenv("SPACE_PATH", temp_space_path)
+        monkeypatch.setenv("DB_PATH", temp_db_path)
+
+        # Enable proposals for this test
+        mcp_module.proposals_enabled = True
 
         # Attempt path traversal
-        result = await update_page("../../../tmp/evil.md", "malicious content")
+        result = await propose_change(
+            target_page="../../../tmp/evil.md",
+            content="malicious content",
+            title="Evil",
+            description="Path traversal attempt",
+        )
         assert result["success"] is False
         assert "Invalid page name" in result["error"]
 
@@ -243,7 +263,7 @@ class TestMCPHTTPServer:
                 assert "semantic_search" in tool_names
                 assert "hybrid_search_tool" in tool_names
                 assert "read_page" in tool_names
-                assert "update_page" in tool_names
+                assert "propose_change" in tool_names
 
     @skip_integration
     @pytest.mark.asyncio

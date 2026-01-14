@@ -32,7 +32,7 @@ Silverbullet Space (markdown files)
 | `GraphDB`          | `server/db/graph.py`            | LadybugDB wrapper with Cypher, BM25, and vector search           |
 | `EmbeddingService` | `server/embeddings.py`          | Embedding generation (OpenAI or local fastembed)                 |
 | `HybridSearch`     | `server/search/hybrid.py`       | Combines keyword + semantic search with RRF                      |
-| `MCP Server`       | `server/mcp_http_server.py`     | FastMCP HTTP server with 10 tools                                |
+| `MCP Server`       | `server/mcp_http_server.py`     | FastMCP HTTP server with 9 tools                                 |
 | `Proposals`        | `server/proposals.py`           | AI proposal management (propose, list, withdraw)                 |
 | `ConfigParser`     | `server/config_parser.py`       | Parse CONFIG.md space-lua blocks                                 |
 | `gRPC Server`      | `server/grpc_server.py`         | Fast binary protocol for hooks                                   |
