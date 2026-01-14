@@ -58,18 +58,19 @@ async def cypher_query(query: str) -> Dict[str, Any]:
 
 # Tool 2: Keyword Search
 @mcp.tool()
-async def keyword_search(query: str) -> Dict[str, Any]:
+async def keyword_search(query: str, limit: int = 10) -> Dict[str, Any]:
     """
     BM25-ranked keyword search across chunks, tags, and pages.
 
     Args:
         query: Search keyword or phrase
+        limit: Maximum results to return (default: 10)
 
     Returns:
         Ranked search results with BM25 scores
     """
     try:
-        results = graph_db.keyword_search(query)
+        results = graph_db.keyword_search(query, limit=limit)
         return {"success": True, "results": results}
     except Exception as e:
         logger.error(f"Keyword search failed: {e}")

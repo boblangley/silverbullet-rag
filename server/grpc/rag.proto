@@ -32,6 +32,7 @@ message QueryResponse {
 
 message SearchRequest {
   string keyword = 1;
+  int32 limit = 2;
 }
 
 message SearchResponse {

@@ -37,7 +37,8 @@ class RAGServiceServicer(rag_pb2_grpc.RAGServiceServicer):
     def Search(self, request, context):
         """Search by keyword."""
         try:
-            results = self.graph_db.keyword_search(request.keyword)
+            limit = request.limit if request.limit > 0 else 10
+            results = self.graph_db.keyword_search(request.keyword, limit=limit)
             return rag_pb2.SearchResponse(
                 results_json=json.dumps(results), success=True, error=""
             )
