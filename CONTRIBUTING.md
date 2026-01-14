@@ -23,20 +23,22 @@ The easiest way to get started is using the included dev container with VS Code 
 3. **Wait for Setup**:
    The container will automatically:
    - Install Python 3.11
-   - Install Poetry and project dependencies
-   - Configure VS Code extensions (Python, Black, mypy, etc.)
+   - Install dependencies from `requirements.txt`
+   - Set up pre-commit hooks for ruff linting/formatting
+   - Configure VS Code extensions (Python, Ruff, mypy, etc.)
 
 ### Option 2: Local Development
 
 1. **Prerequisites**:
    - Python 3.11+
-   - [Poetry](https://python-poetry.org/docs/#installation)
 
 2. **Clone and Install**:
    ```bash
    git clone https://github.com/YOUR_USERNAME/silverbullet-rag.git
    cd silverbullet-rag
-   poetry install
+   pip install -r requirements.txt
+   pip install pytest pytest-asyncio pytest-cov pytest-mock ruff pre-commit
+   pre-commit install
    ```
 
 3. **Set Environment Variables**:
@@ -51,13 +53,13 @@ The easiest way to get started is using the included dev container with VS Code 
 
 ```bash
 # Run all tests with verbose output
-poetry run pytest tests/ -v
+python -m pytest tests/ -v
 
 # Run with coverage report
-poetry run pytest tests/ --cov=server --cov-report=term-missing
+python -m pytest tests/ --cov=server --cov-report=term-missing
 
 # Run with HTML coverage report
-poetry run pytest tests/ --cov=server --cov-report=html
+python -m pytest tests/ --cov=server --cov-report=html
 open htmlcov/index.html
 ```
 
@@ -65,29 +67,29 @@ open htmlcov/index.html
 
 ```bash
 # Parser and v2 features
-poetry run pytest tests/test_v2_features.py -v
+python -m pytest tests/test_v2_features.py -v
 
 # Search functionality
-poetry run pytest tests/test_bm25_ranking.py tests/test_semantic_search.py tests/test_hybrid_search.py -v
+python -m pytest tests/test_bm25_ranking.py tests/test_semantic_search.py tests/test_hybrid_search.py -v
 
 # Security tests
-poetry run pytest tests/test_security.py -v
+python -m pytest tests/test_security.py -v
 
 # gRPC server
-poetry run pytest tests/test_grpc_server.py -v
+python -m pytest tests/test_grpc_server.py -v
 
 # MCP HTTP server
-poetry run pytest tests/test_mcp_http.py -v
+python -m pytest tests/test_mcp_http.py -v
 ```
 
 ### Running a Single Test
 
 ```bash
 # By test name
-poetry run pytest tests/test_v2_features.py::TestTransclusionParsing::test_extract_simple_transclusion -v
+python -m pytest tests/test_v2_features.py::TestTransclusionParsing::test_extract_simple_transclusion -v
 
 # By keyword
-poetry run pytest -k "transclusion" -v
+python -m pytest -k "transclusion" -v
 ```
 
 ### Integration Tests
@@ -190,28 +192,37 @@ Tests are configured to:
 
 ## Code Quality
 
-### Formatting
+Pre-commit hooks are configured to run automatically on commit. You can also run them manually:
+
+### Pre-commit (Recommended)
 
 ```bash
-# Format code with Black
-poetry run black server/ tests/
+# Run all hooks on all files
+pre-commit run --all-files
 
-# Check formatting without changes
-poetry run black server/ tests/ --check
+# Run on staged files only
+pre-commit run
+```
+
+### Manual Linting and Formatting
+
+```bash
+# Lint and auto-fix with ruff
+ruff check server/ tests/ --fix
+
+# Format with ruff
+ruff format server/ tests/
+
+# Check without changes
+ruff check server/ tests/
+ruff format server/ tests/ --check
 ```
 
 ### Type Checking
 
 ```bash
 # Run mypy
-poetry run mypy server/
-```
-
-### Import Sorting
-
-```bash
-# Sort imports with isort
-poetry run isort server/ tests/
+mypy server/
 ```
 
 ## Building Docker Image
@@ -282,10 +293,10 @@ silverbullet-rag/
 
 1. **Create a branch**: `git checkout -b feature/my-feature`
 2. **Write tests first**: Follow TDD - write failing tests, then implement
-3. **Run all tests**: `poetry run pytest tests/ -v`
-4. **Format code**: `poetry run black server/ tests/`
-5. **Type check**: `poetry run mypy server/`
-6. **Commit with clear message**: Describe what and why
+3. **Run all tests**: `python -m pytest tests/ -v`
+4. **Run pre-commit hooks**: `pre-commit run --all-files`
+5. **Type check**: `mypy server/`
+6. **Commit with clear message**: Describe what and why (pre-commit hooks run automatically)
 7. **Open PR**: Reference any related issues
 
 ## Common Development Tasks
@@ -309,8 +320,8 @@ silverbullet-rag/
 
 ### Debugging Tips
 
-- **View test output**: `poetry run pytest -v -s` (shows print statements)
-- **Debug specific test**: `poetry run pytest --pdb -k "test_name"`
+- **View test output**: `python -m pytest -v -s` (shows print statements)
+- **Debug specific test**: `python -m pytest --pdb -k "test_name"`
 - **Check coverage gaps**: Review `htmlcov/index.html` after coverage run
 - **Database issues**: Delete temp database and retry with `--rebuild`
 

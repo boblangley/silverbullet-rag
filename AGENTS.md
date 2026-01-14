@@ -40,10 +40,11 @@ Silverbullet Space (markdown files)
 
 ### Code Style
 
-- **Formatter**: Black with 88-char line length
+- **Formatter/Linter**: Ruff (replaces Black, isort, flake8)
+- **Pre-commit**: Hooks configured in `.pre-commit-config.yaml`
 - **Type hints**: Required for all public functions
 - **Docstrings**: Google-style docstrings
-- **Imports**: Sorted with isort, grouped by stdlib → third-party → local
+- **Imports**: Auto-sorted by ruff, grouped by stdlib → third-party → local
 
 ### Testing
 
@@ -54,8 +55,16 @@ Silverbullet Space (markdown files)
 
 Run tests:
 ```bash
-poetry run pytest tests/ -v
-poetry run pytest tests/ --cov=server --cov-report=term-missing
+python -m pytest tests/ -v
+python -m pytest tests/ --cov=server --cov-report=term-missing
+```
+
+Run linting:
+```bash
+pre-commit run --all-files
+# Or directly:
+ruff check server/ tests/ --fix
+ruff format server/ tests/
 ```
 
 ### File Organization
