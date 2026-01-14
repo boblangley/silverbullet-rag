@@ -54,6 +54,8 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           RUN_OPENAI_TESTS: "true"
+          EMBEDDING_PROVIDER: openai
+          EMBEDDING_MODEL: text-embedding-3-small
         run: |
           python -m pytest tests/test_embeddings.py -v \
             -k "OpenAI" \

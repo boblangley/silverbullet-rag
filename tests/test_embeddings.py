@@ -184,6 +184,7 @@ class TestEmbeddingServiceOpenAI:
     def test_initialization_with_openai_provider(self, monkeypatch):
         """Test that EmbeddingService initializes with OpenAI provider."""
         monkeypatch.setenv("EMBEDDING_PROVIDER", "openai")
+        monkeypatch.delenv("EMBEDDING_MODEL", raising=False)  # Use default model
         service = EmbeddingService()
         assert service.provider_name == "openai"
         assert service.model == "text-embedding-3-small"
@@ -191,12 +192,14 @@ class TestEmbeddingServiceOpenAI:
     def test_get_embedding_dimension_openai(self, monkeypatch):
         """Test that OpenAI provider returns correct dimension."""
         monkeypatch.setenv("EMBEDDING_PROVIDER", "openai")
+        monkeypatch.delenv("EMBEDDING_MODEL", raising=False)  # Use default model
         service = EmbeddingService()
         assert service.get_embedding_dimension() == 1536
 
     def test_generate_embedding_openai(self, monkeypatch):
         """Test embedding generation with real OpenAI API."""
         monkeypatch.setenv("EMBEDDING_PROVIDER", "openai")
+        monkeypatch.delenv("EMBEDDING_MODEL", raising=False)  # Use default model
         service = EmbeddingService()
         result = service.generate_embedding("test content")
 
@@ -206,6 +209,7 @@ class TestEmbeddingServiceOpenAI:
     def test_generate_embeddings_batch_openai(self, monkeypatch):
         """Test batch embedding with real OpenAI API."""
         monkeypatch.setenv("EMBEDDING_PROVIDER", "openai")
+        monkeypatch.delenv("EMBEDDING_MODEL", raising=False)  # Use default model
         service = EmbeddingService()
         texts = ["text 1", "text 2"]
         results = service.generate_embeddings_batch(texts)
