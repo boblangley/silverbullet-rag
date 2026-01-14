@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from server.grpc import rag_pb2 as server_dot_grpc_dot_rag__pb2
+from . import rag_pb2 as rag__pb2
 
 GRPC_GENERATED_VERSION = '1.76.0'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in server/grpc/rag_pb2_grpc.py depends on'
+        + ' but the generated code in rag_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -37,23 +37,28 @@ class RAGServiceStub(object):
         """
         self.Query = channel.unary_unary(
                 '/silverbullet_rag.RAGService/Query',
-                request_serializer=server_dot_grpc_dot_rag__pb2.QueryRequest.SerializeToString,
-                response_deserializer=server_dot_grpc_dot_rag__pb2.QueryResponse.FromString,
+                request_serializer=rag__pb2.QueryRequest.SerializeToString,
+                response_deserializer=rag__pb2.QueryResponse.FromString,
                 _registered_method=True)
         self.Search = channel.unary_unary(
                 '/silverbullet_rag.RAGService/Search',
-                request_serializer=server_dot_grpc_dot_rag__pb2.SearchRequest.SerializeToString,
-                response_deserializer=server_dot_grpc_dot_rag__pb2.SearchResponse.FromString,
+                request_serializer=rag__pb2.SearchRequest.SerializeToString,
+                response_deserializer=rag__pb2.SearchResponse.FromString,
                 _registered_method=True)
         self.SemanticSearch = channel.unary_unary(
                 '/silverbullet_rag.RAGService/SemanticSearch',
-                request_serializer=server_dot_grpc_dot_rag__pb2.SemanticSearchRequest.SerializeToString,
-                response_deserializer=server_dot_grpc_dot_rag__pb2.SemanticSearchResponse.FromString,
+                request_serializer=rag__pb2.SemanticSearchRequest.SerializeToString,
+                response_deserializer=rag__pb2.SemanticSearchResponse.FromString,
+                _registered_method=True)
+        self.HybridSearch = channel.unary_unary(
+                '/silverbullet_rag.RAGService/HybridSearch',
+                request_serializer=rag__pb2.HybridSearchRequest.SerializeToString,
+                response_deserializer=rag__pb2.HybridSearchResponse.FromString,
                 _registered_method=True)
         self.UpdatePage = channel.unary_unary(
                 '/silverbullet_rag.RAGService/UpdatePage',
-                request_serializer=server_dot_grpc_dot_rag__pb2.UpdatePageRequest.SerializeToString,
-                response_deserializer=server_dot_grpc_dot_rag__pb2.UpdatePageResponse.FromString,
+                request_serializer=rag__pb2.UpdatePageRequest.SerializeToString,
+                response_deserializer=rag__pb2.UpdatePageResponse.FromString,
                 _registered_method=True)
 
 
@@ -82,6 +87,13 @@ class RAGServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def HybridSearch(self, request, context):
+        """Hybrid search combining keyword and semantic search
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def UpdatePage(self, request, context):
         """Update/reindex a page
         """
@@ -94,23 +106,28 @@ def add_RAGServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'Query': grpc.unary_unary_rpc_method_handler(
                     servicer.Query,
-                    request_deserializer=server_dot_grpc_dot_rag__pb2.QueryRequest.FromString,
-                    response_serializer=server_dot_grpc_dot_rag__pb2.QueryResponse.SerializeToString,
+                    request_deserializer=rag__pb2.QueryRequest.FromString,
+                    response_serializer=rag__pb2.QueryResponse.SerializeToString,
             ),
             'Search': grpc.unary_unary_rpc_method_handler(
                     servicer.Search,
-                    request_deserializer=server_dot_grpc_dot_rag__pb2.SearchRequest.FromString,
-                    response_serializer=server_dot_grpc_dot_rag__pb2.SearchResponse.SerializeToString,
+                    request_deserializer=rag__pb2.SearchRequest.FromString,
+                    response_serializer=rag__pb2.SearchResponse.SerializeToString,
             ),
             'SemanticSearch': grpc.unary_unary_rpc_method_handler(
                     servicer.SemanticSearch,
-                    request_deserializer=server_dot_grpc_dot_rag__pb2.SemanticSearchRequest.FromString,
-                    response_serializer=server_dot_grpc_dot_rag__pb2.SemanticSearchResponse.SerializeToString,
+                    request_deserializer=rag__pb2.SemanticSearchRequest.FromString,
+                    response_serializer=rag__pb2.SemanticSearchResponse.SerializeToString,
+            ),
+            'HybridSearch': grpc.unary_unary_rpc_method_handler(
+                    servicer.HybridSearch,
+                    request_deserializer=rag__pb2.HybridSearchRequest.FromString,
+                    response_serializer=rag__pb2.HybridSearchResponse.SerializeToString,
             ),
             'UpdatePage': grpc.unary_unary_rpc_method_handler(
                     servicer.UpdatePage,
-                    request_deserializer=server_dot_grpc_dot_rag__pb2.UpdatePageRequest.FromString,
-                    response_serializer=server_dot_grpc_dot_rag__pb2.UpdatePageResponse.SerializeToString,
+                    request_deserializer=rag__pb2.UpdatePageRequest.FromString,
+                    response_serializer=rag__pb2.UpdatePageResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -139,8 +156,8 @@ class RAGService(object):
             request,
             target,
             '/silverbullet_rag.RAGService/Query',
-            server_dot_grpc_dot_rag__pb2.QueryRequest.SerializeToString,
-            server_dot_grpc_dot_rag__pb2.QueryResponse.FromString,
+            rag__pb2.QueryRequest.SerializeToString,
+            rag__pb2.QueryResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -166,8 +183,8 @@ class RAGService(object):
             request,
             target,
             '/silverbullet_rag.RAGService/Search',
-            server_dot_grpc_dot_rag__pb2.SearchRequest.SerializeToString,
-            server_dot_grpc_dot_rag__pb2.SearchResponse.FromString,
+            rag__pb2.SearchRequest.SerializeToString,
+            rag__pb2.SearchResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -193,8 +210,35 @@ class RAGService(object):
             request,
             target,
             '/silverbullet_rag.RAGService/SemanticSearch',
-            server_dot_grpc_dot_rag__pb2.SemanticSearchRequest.SerializeToString,
-            server_dot_grpc_dot_rag__pb2.SemanticSearchResponse.FromString,
+            rag__pb2.SemanticSearchRequest.SerializeToString,
+            rag__pb2.SemanticSearchResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def HybridSearch(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/silverbullet_rag.RAGService/HybridSearch',
+            rag__pb2.HybridSearchRequest.SerializeToString,
+            rag__pb2.HybridSearchResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -220,8 +264,8 @@ class RAGService(object):
             request,
             target,
             '/silverbullet_rag.RAGService/UpdatePage',
-            server_dot_grpc_dot_rag__pb2.UpdatePageRequest.SerializeToString,
-            server_dot_grpc_dot_rag__pb2.UpdatePageResponse.FromString,
+            rag__pb2.UpdatePageRequest.SerializeToString,
+            rag__pb2.UpdatePageResponse.FromString,
             options,
             channel_credentials,
             insecure,
