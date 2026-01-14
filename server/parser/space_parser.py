@@ -145,6 +145,63 @@ class SpaceParser:
 
         return chunks
 
+    def parse_file(self, file_path: str, expand_transclusions: bool = True) -> List[Chunk]:
+        """Parse a single markdown file into chunks.
+
+        This is the public API for parsing individual files, useful for
+        incremental reindexing when a file changes.
+
+        Args:
+            file_path: Absolute path to the markdown file
+            expand_transclusions: Whether to expand transclusion content (default: True)
+
+        Returns:
+            List of chunks extracted from the file
+        """
+        file_path = Path(file_path).resolve()
+
+        if not file_path.exists():
+            return []
+
+        if not file_path.suffix == ".md":
+            return []
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Calculate folder path relative to space root
+            if self.space_root and file_path.is_relative_to(self.space_root):
+                relative_path = file_path.relative_to(self.space_root)
+                folder_path = (
+                    str(relative_path.parent)
+                    if relative_path.parent != Path(".")
+                    else ""
+                )
+            else:
+                folder_path = ""
+
+            # Extract frontmatter
+            frontmatter = self._extract_frontmatter(content)
+
+            # Update caches
+            if self.space_root:
+                page_name = str(file_path.relative_to(self.space_root).with_suffix(""))
+                self._content_cache[page_name] = content
+            self._frontmatter_cache[str(file_path)] = frontmatter
+
+            # Parse file into chunks
+            return self._parse_file(
+                str(file_path),
+                content,
+                folder_path=folder_path,
+                frontmatter=frontmatter,
+                expand_transclusions=expand_transclusions,
+            )
+        except Exception as e:
+            print(f"Error parsing {file_path}: {e}")
+            return []
+
     def _parse_file(
         self,
         file_path: str,
