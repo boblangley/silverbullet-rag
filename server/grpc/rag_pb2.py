@@ -4,53 +4,50 @@
 # source: rag.proto
 # Protobuf Python Version: 6.31.1
 """Generated protocol buffer code."""
+
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import descriptor_pool as _descriptor_pool
 from google.protobuf import runtime_version as _runtime_version
 from google.protobuf import symbol_database as _symbol_database
 from google.protobuf.internal import builder as _builder
+
 _runtime_version.ValidateProtobufRuntimeVersion(
-    _runtime_version.Domain.PUBLIC,
-    6,
-    31,
-    1,
-    '',
-    'rag.proto'
+    _runtime_version.Domain.PUBLIC, 6, 31, 1, "", "rag.proto"
 )
 # @@protoc_insertion_point(imports)
 
 _sym_db = _symbol_database.Default()
 
 
-
-
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\trag.proto\x12\x10silverbullet_rag\"$\n\x0cQueryRequest\x12\x14\n\x0c\x63ypher_query\x18\x01 \x01(\t\"E\n\rQueryResponse\x12\x14\n\x0cresults_json\x18\x01 \x01(\t\x12\x0f\n\x07success\x18\x02 \x01(\x08\x12\r\n\x05\x65rror\x18\x03 \x01(\t\"/\n\rSearchRequest\x12\x0f\n\x07keyword\x18\x01 \x01(\t\x12\r\n\x05limit\x18\x02 \x01(\x05\"F\n\x0eSearchResponse\x12\x14\n\x0cresults_json\x18\x01 \x01(\t\x12\x0f\n\x07success\x18\x02 \x01(\x08\x12\r\n\x05\x65rror\x18\x03 \x01(\t\"`\n\x15SemanticSearchRequest\x12\r\n\x05query\x18\x01 \x01(\t\x12\r\n\x05limit\x18\x02 \x01(\x05\x12\x13\n\x0b\x66ilter_tags\x18\x03 \x03(\t\x12\x14\n\x0c\x66ilter_pages\x18\x04 \x03(\t\"N\n\x16SemanticSearchResponse\x12\x14\n\x0cresults_json\x18\x01 \x01(\t\x12\x0f\n\x07success\x18\x02 \x01(\x08\x12\r\n\x05\x65rror\x18\x03 \x01(\t\"\xa6\x01\n\x13HybridSearchRequest\x12\r\n\x05query\x18\x01 \x01(\t\x12\r\n\x05limit\x18\x02 \x01(\x05\x12\x13\n\x0b\x66ilter_tags\x18\x03 \x03(\t\x12\x14\n\x0c\x66ilter_pages\x18\x04 \x03(\t\x12\x15\n\rfusion_method\x18\x05 \x01(\t\x12\x17\n\x0fsemantic_weight\x18\x06 \x01(\x02\x12\x16\n\x0ekeyword_weight\x18\x07 \x01(\x02\"L\n\x14HybridSearchResponse\x12\x14\n\x0cresults_json\x18\x01 \x01(\t\x12\x0f\n\x07success\x18\x02 \x01(\x08\x12\r\n\x05\x65rror\x18\x03 \x01(\t\"7\n\x11UpdatePageRequest\x12\x11\n\tpage_name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\"4\n\x12UpdatePageResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\r\n\x05\x65rror\x18\x02 \x01(\t2\xc0\x03\n\nRAGService\x12H\n\x05Query\x12\x1e.silverbullet_rag.QueryRequest\x1a\x1f.silverbullet_rag.QueryResponse\x12K\n\x06Search\x12\x1f.silverbullet_rag.SearchRequest\x1a .silverbullet_rag.SearchResponse\x12\x63\n\x0eSemanticSearch\x12\'.silverbullet_rag.SemanticSearchRequest\x1a(.silverbullet_rag.SemanticSearchResponse\x12]\n\x0cHybridSearch\x12%.silverbullet_rag.HybridSearchRequest\x1a&.silverbullet_rag.HybridSearchResponse\x12W\n\nUpdatePage\x12#.silverbullet_rag.UpdatePageRequest\x1a$.silverbullet_rag.UpdatePageResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
+    b'\n\trag.proto\x12\x10silverbullet_rag"$\n\x0cQueryRequest\x12\x14\n\x0c\x63ypher_query\x18\x01 \x01(\t"E\n\rQueryResponse\x12\x14\n\x0cresults_json\x18\x01 \x01(\t\x12\x0f\n\x07success\x18\x02 \x01(\x08\x12\r\n\x05\x65rror\x18\x03 \x01(\t"/\n\rSearchRequest\x12\x0f\n\x07keyword\x18\x01 \x01(\t\x12\r\n\x05limit\x18\x02 \x01(\x05"F\n\x0eSearchResponse\x12\x14\n\x0cresults_json\x18\x01 \x01(\t\x12\x0f\n\x07success\x18\x02 \x01(\x08\x12\r\n\x05\x65rror\x18\x03 \x01(\t"`\n\x15SemanticSearchRequest\x12\r\n\x05query\x18\x01 \x01(\t\x12\r\n\x05limit\x18\x02 \x01(\x05\x12\x13\n\x0b\x66ilter_tags\x18\x03 \x03(\t\x12\x14\n\x0c\x66ilter_pages\x18\x04 \x03(\t"N\n\x16SemanticSearchResponse\x12\x14\n\x0cresults_json\x18\x01 \x01(\t\x12\x0f\n\x07success\x18\x02 \x01(\x08\x12\r\n\x05\x65rror\x18\x03 \x01(\t"\xa6\x01\n\x13HybridSearchRequest\x12\r\n\x05query\x18\x01 \x01(\t\x12\r\n\x05limit\x18\x02 \x01(\x05\x12\x13\n\x0b\x66ilter_tags\x18\x03 \x03(\t\x12\x14\n\x0c\x66ilter_pages\x18\x04 \x03(\t\x12\x15\n\rfusion_method\x18\x05 \x01(\t\x12\x17\n\x0fsemantic_weight\x18\x06 \x01(\x02\x12\x16\n\x0ekeyword_weight\x18\x07 \x01(\x02"L\n\x14HybridSearchResponse\x12\x14\n\x0cresults_json\x18\x01 \x01(\t\x12\x0f\n\x07success\x18\x02 \x01(\x08\x12\r\n\x05\x65rror\x18\x03 \x01(\t"7\n\x11UpdatePageRequest\x12\x11\n\tpage_name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t"4\n\x12UpdatePageResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\r\n\x05\x65rror\x18\x02 \x01(\t2\xc0\x03\n\nRAGService\x12H\n\x05Query\x12\x1e.silverbullet_rag.QueryRequest\x1a\x1f.silverbullet_rag.QueryResponse\x12K\n\x06Search\x12\x1f.silverbullet_rag.SearchRequest\x1a .silverbullet_rag.SearchResponse\x12\x63\n\x0eSemanticSearch\x12\'.silverbullet_rag.SemanticSearchRequest\x1a(.silverbullet_rag.SemanticSearchResponse\x12]\n\x0cHybridSearch\x12%.silverbullet_rag.HybridSearchRequest\x1a&.silverbullet_rag.HybridSearchResponse\x12W\n\nUpdatePage\x12#.silverbullet_rag.UpdatePageRequest\x1a$.silverbullet_rag.UpdatePageResponseb\x06proto3'
+)
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
-_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rag_pb2', _globals)
+_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, "rag_pb2", _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
-  DESCRIPTOR._loaded_options = None
-  _globals['_QUERYREQUEST']._serialized_start=31
-  _globals['_QUERYREQUEST']._serialized_end=67
-  _globals['_QUERYRESPONSE']._serialized_start=69
-  _globals['_QUERYRESPONSE']._serialized_end=138
-  _globals['_SEARCHREQUEST']._serialized_start=140
-  _globals['_SEARCHREQUEST']._serialized_end=187
-  _globals['_SEARCHRESPONSE']._serialized_start=189
-  _globals['_SEARCHRESPONSE']._serialized_end=259
-  _globals['_SEMANTICSEARCHREQUEST']._serialized_start=261
-  _globals['_SEMANTICSEARCHREQUEST']._serialized_end=357
-  _globals['_SEMANTICSEARCHRESPONSE']._serialized_start=359
-  _globals['_SEMANTICSEARCHRESPONSE']._serialized_end=437
-  _globals['_HYBRIDSEARCHREQUEST']._serialized_start=440
-  _globals['_HYBRIDSEARCHREQUEST']._serialized_end=606
-  _globals['_HYBRIDSEARCHRESPONSE']._serialized_start=608
-  _globals['_HYBRIDSEARCHRESPONSE']._serialized_end=684
-  _globals['_UPDATEPAGEREQUEST']._serialized_start=686
-  _globals['_UPDATEPAGEREQUEST']._serialized_end=741
-  _globals['_UPDATEPAGERESPONSE']._serialized_start=743
-  _globals['_UPDATEPAGERESPONSE']._serialized_end=795
-  _globals['_RAGSERVICE']._serialized_start=798
-  _globals['_RAGSERVICE']._serialized_end=1246
+    DESCRIPTOR._loaded_options = None
+    _globals["_QUERYREQUEST"]._serialized_start = 31
+    _globals["_QUERYREQUEST"]._serialized_end = 67
+    _globals["_QUERYRESPONSE"]._serialized_start = 69
+    _globals["_QUERYRESPONSE"]._serialized_end = 138
+    _globals["_SEARCHREQUEST"]._serialized_start = 140
+    _globals["_SEARCHREQUEST"]._serialized_end = 187
+    _globals["_SEARCHRESPONSE"]._serialized_start = 189
+    _globals["_SEARCHRESPONSE"]._serialized_end = 259
+    _globals["_SEMANTICSEARCHREQUEST"]._serialized_start = 261
+    _globals["_SEMANTICSEARCHREQUEST"]._serialized_end = 357
+    _globals["_SEMANTICSEARCHRESPONSE"]._serialized_start = 359
+    _globals["_SEMANTICSEARCHRESPONSE"]._serialized_end = 437
+    _globals["_HYBRIDSEARCHREQUEST"]._serialized_start = 440
+    _globals["_HYBRIDSEARCHREQUEST"]._serialized_end = 606
+    _globals["_HYBRIDSEARCHRESPONSE"]._serialized_start = 608
+    _globals["_HYBRIDSEARCHRESPONSE"]._serialized_end = 684
+    _globals["_UPDATEPAGEREQUEST"]._serialized_start = 686
+    _globals["_UPDATEPAGEREQUEST"]._serialized_end = 741
+    _globals["_UPDATEPAGERESPONSE"]._serialized_start = 743
+    _globals["_UPDATEPAGERESPONSE"]._serialized_end = 795
+    _globals["_RAGSERVICE"]._serialized_start = 798
+    _globals["_RAGSERVICE"]._serialized_end = 1246
 # @@protoc_insertion_point(module_scope)

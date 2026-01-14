@@ -10,17 +10,14 @@ Key concepts:
 """
 
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 
 # Check if MCP module is available
-try:
-    import mcp
+import importlib.util
 
-    MCP_AVAILABLE = True
-except ImportError:
-    MCP_AVAILABLE = False
+MCP_AVAILABLE = importlib.util.find_spec("mcp") is not None
 
 requires_mcp = pytest.mark.skipif(
     not MCP_AVAILABLE, reason="MCP module not available (install mcp package)"
@@ -253,7 +250,7 @@ Content here.
         Path(temp_space_path, "project.md").write_text(content)
 
         parser = SpaceParser()
-        chunks = parser.parse_space(temp_space_path)
+        _chunks = parser.parse_space(temp_space_path)  # noqa: F841
         frontmatter = parser.get_frontmatter(temp_space_path + "/project.md")
 
         assert frontmatter is not None

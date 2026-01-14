@@ -18,7 +18,12 @@ class QueryResponse(_message.Message):
     results_json: str
     success: bool
     error: str
-    def __init__(self, results_json: _Optional[str] = ..., success: bool = ..., error: _Optional[str] = ...) -> None: ...
+    def __init__(
+        self,
+        results_json: _Optional[str] = ...,
+        success: bool = ...,
+        error: _Optional[str] = ...,
+    ) -> None: ...
 
 class SearchRequest(_message.Message):
     __slots__ = ("keyword",)
@@ -34,7 +39,12 @@ class SearchResponse(_message.Message):
     results_json: str
     success: bool
     error: str
-    def __init__(self, results_json: _Optional[str] = ..., success: bool = ..., error: _Optional[str] = ...) -> None: ...
+    def __init__(
+        self,
+        results_json: _Optional[str] = ...,
+        success: bool = ...,
+        error: _Optional[str] = ...,
+    ) -> None: ...
 
 class UpdatePageRequest(_message.Message):
     __slots__ = ("page_name", "content")
@@ -42,7 +52,9 @@ class UpdatePageRequest(_message.Message):
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     page_name: str
     content: str
-    def __init__(self, page_name: _Optional[str] = ..., content: _Optional[str] = ...) -> None: ...
+    def __init__(
+        self, page_name: _Optional[str] = ..., content: _Optional[str] = ...
+    ) -> None: ...
 
 class UpdatePageResponse(_message.Message):
     __slots__ = ("success", "error")

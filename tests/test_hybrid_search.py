@@ -143,16 +143,16 @@ def test_hybrid_search_outperforms_keyword_only(
     hybrid_search = HybridSearch(graph_db)
 
     # Act
-    keyword_results = graph_db.keyword_search("data management platform")
+    _keyword_results = graph_db.keyword_search("data management platform")  # noqa: F841
     hybrid_results = hybrid_search.search(query="data management platform", limit=10)
 
     # Assert - hybrid should find more relevant results
     hybrid_paths = [r["chunk"].get("file_path", "") for r in hybrid_results]
 
     # Should find the semantically relevant document
-    assert any(
-        "data_storage_systems" in path for path in hybrid_paths
-    ), "Hybrid search should find semantically relevant document"
+    assert any("data_storage_systems" in path for path in hybrid_paths), (
+        "Hybrid search should find semantically relevant document"
+    )
 
 
 def test_hybrid_search_outperforms_semantic_only(
@@ -171,7 +171,7 @@ def test_hybrid_search_outperforms_semantic_only(
     hybrid_search = HybridSearch(graph_db)
 
     # Act
-    semantic_results = graph_db.semantic_search("database")
+    _semantic_results = graph_db.semantic_search("database")  # noqa: F841
     hybrid_results = hybrid_search.search(query="database", limit=10)
 
     # Assert
@@ -180,9 +180,9 @@ def test_hybrid_search_outperforms_semantic_only(
     top_hybrid_path = top_hybrid.get("chunk", {}).get("file_path", "")
 
     # Should prioritize documents with the exact term
-    assert (
-        "database" in top_hybrid_path.lower()
-    ), "Hybrid search should prioritize exact keyword matches"
+    assert "database" in top_hybrid_path.lower(), (
+        "Hybrid search should prioritize exact keyword matches"
+    )
 
 
 def test_hybrid_search_rrf_fusion(temp_db_path: str, diverse_docs_for_hybrid: Path):
@@ -209,15 +209,15 @@ def test_hybrid_search_rrf_fusion(temp_db_path: str, diverse_docs_for_hybrid: Pa
     # Each ranking contributes at most 1/(k+1) ≈ 0.016 for rank 1
     for result in results:
         rrf_score = result["hybrid_score"]
-        assert (
-            0 <= rrf_score <= 1
-        ), f"RRF score should be normalized between 0-1, got {rrf_score}"
+        assert 0 <= rrf_score <= 1, (
+            f"RRF score should be normalized between 0-1, got {rrf_score}"
+        )
 
     # Results should be sorted by hybrid score
     scores = [r["hybrid_score"] for r in results]
-    assert scores == sorted(
-        scores, reverse=True
-    ), "Results should be sorted by hybrid score"
+    assert scores == sorted(scores, reverse=True), (
+        "Results should be sorted by hybrid score"
+    )
 
 
 def test_hybrid_search_weighted_fusion(
@@ -290,7 +290,7 @@ def test_hybrid_search_with_filters(temp_db_path: str, diverse_docs_for_hybrid: 
         """
         tags = graph_db.cypher_query(tag_query, {"chunk_id": chunk_id})
         tag_names = [t.get("col0", "") for t in tags]
-        assert "database" in tag_names, f"Result should have 'database' tag"
+        assert "database" in tag_names, "Result should have 'database' tag"
 
 
 def test_hybrid_search_empty_query(temp_db_path: str, diverse_docs_for_hybrid: Path):
@@ -330,9 +330,9 @@ def test_hybrid_search_no_results(temp_db_path: str, diverse_docs_for_hybrid: Pa
     # Assert - semantic search will return results but keyword scores should be 0
     # since no documents contain the exact query terms
     for result in results:
-        assert (
-            result["keyword_score"] == 0.0
-        ), "No keyword matches expected for nonexistent terms"
+        assert result["keyword_score"] == 0.0, (
+            "No keyword matches expected for nonexistent terms"
+        )
 
 
 def test_hybrid_search_limit_parameter(
@@ -353,9 +353,9 @@ def test_hybrid_search_limit_parameter(
 
     # Assert
     assert len(results_small) <= 2, "Should respect limit parameter"
-    assert len(results_large) >= len(
-        results_small
-    ), "Larger limit should return more results"
+    assert len(results_large) >= len(results_small), (
+        "Larger limit should return more results"
+    )
 
 
 def test_hybrid_search_deduplication(temp_db_path: str, diverse_docs_for_hybrid: Path):

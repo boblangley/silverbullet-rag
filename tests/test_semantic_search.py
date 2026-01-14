@@ -1,8 +1,7 @@
 """Tests for semantic search functionality."""
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
+from unittest.mock import patch, MagicMock
 from server.db.graph import GraphDB
 from server.parser import Chunk
 

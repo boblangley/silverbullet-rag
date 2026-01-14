@@ -9,8 +9,6 @@ import os
 import pytest
 import pytest_asyncio
 import httpx
-import asyncio
-import json
 from pathlib import Path
 
 
@@ -31,9 +29,7 @@ async def http_client():
     Returns:
         httpx.AsyncClient configured for local MCP server
     """
-    async with httpx.AsyncClient(
-        base_url=MCP_SERVER_URL, timeout=10.0
-    ) as client:
+    async with httpx.AsyncClient(base_url=MCP_SERVER_URL, timeout=10.0) as client:
         yield client
 
 
@@ -83,7 +79,7 @@ class TestMCPHTTPServer:
 
         This should PASS - tests tool logic without server.
         """
-        from server.mcp_http_server import cypher_query, graph_db
+        from server.mcp_http_server import cypher_query
         from server.db.graph import GraphDB
 
         # Initialize graph_db for testing
@@ -159,7 +155,6 @@ class TestMCPHTTPServer:
         This should PASS - tests tool logic without server.
         """
         from server.mcp_http_server import update_page
-        from pathlib import Path
 
         # Set SPACE_PATH environment variable
         monkeypatch.setenv("SPACE_PATH", temp_space_path)

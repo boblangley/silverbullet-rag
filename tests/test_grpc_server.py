@@ -7,7 +7,6 @@ These tests should FAIL initially since proto files aren't compiled.
 import os
 import pytest
 import grpc
-from pathlib import Path
 
 
 # Allow overriding the gRPC server address for Docker integration tests

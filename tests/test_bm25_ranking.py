@@ -100,21 +100,21 @@ def test_bm25_ranking_basic(temp_db_path: str, sample_docs_for_bm25: Path):
     # Check that results have BM25 scores
     for result in results:
         assert "bm25_score" in result, "Each result should have a BM25 score"
-        assert isinstance(
-            result["bm25_score"], (int, float)
-        ), "BM25 score should be numeric"
+        assert isinstance(result["bm25_score"], (int, float)), (
+            "BM25 score should be numeric"
+        )
 
     # Check that results are sorted by score (descending)
     scores = [r["bm25_score"] for r in results]
-    assert scores == sorted(
-        scores, reverse=True
-    ), "Results should be sorted by BM25 score (highest first)"
+    assert scores == sorted(scores, reverse=True), (
+        "Results should be sorted by BM25 score (highest first)"
+    )
 
     # Document with highest frequency should rank higher than single mention
     top_result = results[0]
-    assert "database_tutorial" in top_result.get("col0", {}).get(
-        "file_path", ""
-    ), "Document with highest term frequency should rank first"
+    assert "database_tutorial" in top_result.get("col0", {}).get("file_path", ""), (
+        "Document with highest term frequency should rank first"
+    )
 
 
 def test_bm25_tag_weighting(temp_db_path: str, sample_docs_for_bm25: Path):
@@ -136,9 +136,9 @@ def test_bm25_tag_weighting(temp_db_path: str, sample_docs_for_bm25: Path):
 
     # Document with "optimization" in tags should rank highly
     top_results_content = [r.get("col0", {}).get("file_path", "") for r in results[:2]]
-    assert any(
-        "database_optimization" in path for path in top_results_content
-    ), "Document with matching tag should be in top results"
+    assert any("database_optimization" in path for path in top_results_content), (
+        "Document with matching tag should be in top results"
+    )
 
 
 def test_bm25_technical_term_weighting(temp_db_path: str, sample_docs_for_bm25: Path):
@@ -195,9 +195,9 @@ def test_bm25_multi_term_query(temp_db_path: str, sample_docs_for_bm25: Path):
     # Document matching both terms should rank highest
     top_result = results[0]
     top_path = top_result.get("col0", {}).get("file_path", "")
-    assert (
-        "database_optimization" in top_path
-    ), "Document matching both query terms should rank first"
+    assert "database_optimization" in top_path, (
+        "Document matching both query terms should rank first"
+    )
 
 
 def test_bm25_scoring_consistency(temp_db_path: str, sample_docs_for_bm25: Path):
@@ -213,14 +213,14 @@ def test_bm25_scoring_consistency(temp_db_path: str, sample_docs_for_bm25: Path)
     results2 = graph_db.keyword_search("database")
 
     # Assert
-    assert len(results1) == len(
-        results2
-    ), "Same query should return same number of results"
+    assert len(results1) == len(results2), (
+        "Same query should return same number of results"
+    )
 
     for r1, r2 in zip(results1, results2):
-        assert (
-            r1["bm25_score"] == r2["bm25_score"]
-        ), "BM25 scores should be consistent across identical searches"
+        assert r1["bm25_score"] == r2["bm25_score"], (
+            "BM25 scores should be consistent across identical searches"
+        )
 
 
 def test_bm25_score_normalization(temp_db_path: str, sample_docs_for_bm25: Path):
@@ -238,6 +238,6 @@ def test_bm25_score_normalization(temp_db_path: str, sample_docs_for_bm25: Path)
     for result in results:
         score = result["bm25_score"]
         assert score >= 0, "BM25 scores should be non-negative"
-        assert (
-            score < 1000
-        ), "BM25 scores should be reasonable (< 1000 for typical documents)"
+        assert score < 1000, (
+            "BM25 scores should be reasonable (< 1000 for typical documents)"
+        )

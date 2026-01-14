@@ -6,7 +6,7 @@ These tests should FAIL initially since keyword_search uses string interpolation
 
 import pytest
 from server.db import GraphDB
-from server.parser import SpaceParser, Chunk
+from server.parser import SpaceParser
 
 
 class TestCypherInjection:
@@ -54,9 +54,9 @@ class TestCypherInjection:
 
         # Should return 0 results (no match) or handle safely
         # Should NOT return all chunks (which would happen if injection succeeds)
-        assert (
-            len(results) <= 1
-        ), f"Injection may have succeeded - got {len(results)} results"
+        assert len(results) <= 1, (
+            f"Injection may have succeeded - got {len(results)} results"
+        )
 
     def test_keyword_search_union_injection(self, graph_db_with_data):
         """RED: Test protection against UNION-based injection.
@@ -70,7 +70,7 @@ class TestCypherInjection:
             results = graph_db_with_data.keyword_search(malicious_input)
             # Should return 0 or very few results, not all chunks
             assert len(results) < 2, "UNION injection may have succeeded"
-        except Exception as e:
+        except Exception:
             # Query errors are acceptable - means injection didn't work cleanly
             pass
 
@@ -133,9 +133,9 @@ class TestCypherInjection:
             assert isinstance(results, list)
             # Should return 0 results since 'xyznotfound' doesn't exist in test data
             # and comment chars are treated as literals, not query syntax
-            assert (
-                len(results) == 0
-            ), f"Expected 0 results for '{search_term}', got {len(results)}"
+            assert len(results) == 0, (
+                f"Expected 0 results for '{search_term}', got {len(results)}"
+            )
 
     def test_cypher_query_method_with_injection(self, graph_db_with_data):
         """Test that direct cypher_query method is safe with parameters.

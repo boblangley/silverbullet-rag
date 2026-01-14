@@ -7,15 +7,12 @@ These tests should FAIL initially since deletion logic isn't implemented.
 import pytest
 from pathlib import Path
 from server.db import GraphDB
-from server.parser import SpaceParser, Chunk
+from server.parser import SpaceParser
 
 # Check if watchdog module is available
-try:
-    import watchdog
+import importlib.util
 
-    WATCHDOG_AVAILABLE = True
-except ImportError:
-    WATCHDOG_AVAILABLE = False
+WATCHDOG_AVAILABLE = importlib.util.find_spec("watchdog") is not None
 
 requires_watchdog = pytest.mark.skipif(
     not WATCHDOG_AVAILABLE,
@@ -184,7 +181,7 @@ Standalone content with #tag3 #shared.
         # This is tricky - page1 still links TO page2, so Page node might remain
         # But chunks from page2 are gone
         # Let's verify chunks are gone
-        query_chunks = f"MATCH (c:Chunk) WHERE c.file_path CONTAINS 'page2.md' RETURN count(c) as count"
+        query_chunks = "MATCH (c:Chunk) WHERE c.file_path CONTAINS 'page2.md' RETURN count(c) as count"
         result = graph_db.cypher_query(query_chunks)
         count = result[0]["col0"] if result else 0
         assert count == 0, "No chunks should reference deleted file"
