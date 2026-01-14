@@ -17,6 +17,14 @@ from mcp.server.fastmcp import FastMCP
 from .db.graph import GraphDB
 from .parser.space_parser import SpaceParser
 from .search import HybridSearch
+from .proposals import (
+    library_installed,
+    get_proposal_path,
+    page_exists,
+    find_proposals,
+    create_proposal_content,
+    get_proposals_config,
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -34,6 +42,7 @@ mcp = FastMCP(
 graph_db: Optional[GraphDB] = None
 space_parser: Optional[SpaceParser] = None
 hybrid_search: Optional[HybridSearch] = None
+proposals_enabled: bool = False
 
 
 # Tool 1: Cypher Query
@@ -337,9 +346,151 @@ async def update_page(page_name: str, content: str) -> Dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
+# Tool 8: Propose Change
+@mcp.tool()
+async def propose_change(
+    target_page: str,
+    content: str,
+    title: str,
+    description: str,
+) -> Dict[str, Any]:
+    """
+    Propose a change to a page. Requires AI-Proposals library installed.
+
+    Creates a proposal that the user can review and apply in Silverbullet.
+    The change is NOT applied until the user accepts it.
+
+    Args:
+        target_page: Page path (e.g., 'Projects/MyProject.md')
+        content: Proposed page content
+        title: Short title for the proposal
+        description: Explanation of why this change is proposed
+
+    Returns:
+        Proposal path and status
+    """
+    if not proposals_enabled:
+        return {
+            "success": False,
+            "error": "AI-Proposals library not installed",
+            "instructions": "Install the AI-Proposals library from Library Manager",
+        }
+
+    try:
+        space_path = Path(os.getenv("SPACE_PATH", "/space"))
+        db_path = Path(os.getenv("DB_PATH", "/data/ladybug"))
+
+        # Security check - prevent path traversal
+        file_path = space_path / target_page
+        if not file_path.resolve().is_relative_to(space_path.resolve()):
+            return {"success": False, "error": f"Invalid page name: {target_page}"}
+
+        # Get config for path prefix
+        proposals_config = get_proposals_config(db_path)
+        prefix = proposals_config.get("path_prefix", "_Proposals/")
+
+        is_new_page = not page_exists(space_path, target_page)
+        proposal_path = get_proposal_path(target_page, prefix)
+
+        proposal_content = create_proposal_content(
+            target_page=target_page,
+            content=content,
+            title=title,
+            description=description,
+            is_new_page=is_new_page,
+        )
+
+        # Write proposal file
+        full_path = space_path / proposal_path
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        full_path.write_text(proposal_content, encoding="utf-8")
+
+        logger.info(f"Created proposal: {proposal_path}")
+
+        return {
+            "success": True,
+            "proposal_path": proposal_path,
+            "is_new_page": is_new_page,
+            "message": f"Proposal created. User can review at {proposal_path}",
+        }
+    except Exception as e:
+        logger.error(f"Failed to create proposal: {e}")
+        return {"success": False, "error": str(e)}
+
+
+# Tool 9: List Proposals
+@mcp.tool()
+async def list_proposals(status: str = "pending") -> Dict[str, Any]:
+    """
+    List change proposals by status.
+
+    Args:
+        status: Filter by proposal status ('pending', 'accepted', 'rejected', 'all')
+
+    Returns:
+        List of proposals with summary information
+    """
+    if not proposals_enabled:
+        return {"success": False, "error": "AI-Proposals library not installed"}
+
+    try:
+        space_path = Path(os.getenv("SPACE_PATH", "/space"))
+        db_path = Path(os.getenv("DB_PATH", "/data/ladybug"))
+
+        proposals_config = get_proposals_config(db_path)
+        prefix = proposals_config.get("path_prefix", "_Proposals/")
+
+        proposals = find_proposals(space_path, prefix, status)
+
+        return {"success": True, "count": len(proposals), "proposals": proposals}
+    except Exception as e:
+        logger.error(f"Failed to list proposals: {e}")
+        return {"success": False, "error": str(e)}
+
+
+# Tool 10: Withdraw Proposal
+@mcp.tool()
+async def withdraw_proposal(proposal_path: str) -> Dict[str, Any]:
+    """
+    Withdraw a pending proposal.
+
+    Args:
+        proposal_path: Path to the .proposal file
+
+    Returns:
+        Success confirmation
+    """
+    if not proposals_enabled:
+        return {"success": False, "error": "AI-Proposals library not installed"}
+
+    try:
+        space_path = Path(os.getenv("SPACE_PATH", "/space"))
+
+        full_path = space_path / proposal_path
+        if not full_path.resolve().is_relative_to(space_path.resolve()):
+            return {
+                "success": False,
+                "error": f"Invalid proposal path: {proposal_path}",
+            }
+
+        if not full_path.exists():
+            return {"success": False, "error": "Proposal not found"}
+
+        if not proposal_path.endswith(".proposal"):
+            return {"success": False, "error": "Not a proposal file"}
+
+        full_path.unlink()
+        logger.info(f"Withdrew proposal: {proposal_path}")
+
+        return {"success": True, "message": "Proposal withdrawn"}
+    except Exception as e:
+        logger.error(f"Failed to withdraw proposal: {e}")
+        return {"success": False, "error": str(e)}
+
+
 async def initialize_server():
     """Initialize database and parser before serving requests."""
-    global graph_db, space_parser, hybrid_search
+    global graph_db, space_parser, hybrid_search, proposals_enabled
 
     logger.info("Initializing Silverbullet RAG server...")
 
@@ -363,6 +514,14 @@ async def initialize_server():
 
     # Initialize hybrid search
     hybrid_search = HybridSearch(graph_db)
+
+    # Check if AI-Proposals library is installed
+    space_path_obj = Path(space_path)
+    if library_installed(space_path_obj):
+        proposals_enabled = True
+        logger.info("AI-Proposals library found, proposal tools enabled")
+    else:
+        logger.info("AI-Proposals library not installed, proposal tools disabled")
 
     logger.info("Server initialization complete!")
 
