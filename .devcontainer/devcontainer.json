@@ -32,8 +32,7 @@
         // Python development
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-python.black-formatter",
-        "ms-python.isort",
+        "charliermarsh.ruff",
         "ms-python.mypy-type-checker",
 
         // Docker and containers
@@ -60,17 +59,15 @@
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "python.linting.enabled": true,
-        "python.linting.pylintEnabled": false,
-        "python.linting.mypyEnabled": true,
-        "editor.formatOnSave": true,
-        "editor.codeActionsOnSave": {
-          "source.organizeImports": "explicit"
-        },
         "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
           "editor.formatOnSave": true,
-          "editor.rulers": [88]
+          "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "explicit",
+            "source.organizeImports.ruff": "explicit"
+          }
         },
+        "ruff.lint.run": "onSave",
         "files.exclude": {
           "**/__pycache__": true,
           "**/*.pyc": true,
@@ -80,5 +77,5 @@
       }
     }
   },
-  "postCreateCommand": "pip install -r requirements.txt && pip install pytest pytest-asyncio pytest-cov pytest-mock black mypy"
+  "postCreateCommand": "pip install -r requirements.txt && pip install pytest pytest-asyncio pytest-cov pytest-mock ruff pre-commit && pre-commit install"
 }
