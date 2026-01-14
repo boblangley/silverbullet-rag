@@ -91,7 +91,9 @@ class HybridSearch:
         # Fuse results using selected method
         if fusion_method == "rrf":
             fused_results = self._reciprocal_rank_fusion(
-                keyword_results, semantic_results, limit * 2  # Get more for filtering
+                keyword_results,
+                semantic_results,
+                limit * 2,  # Get more for filtering
             )
         else:  # weighted
             fused_results = self._weighted_fusion(

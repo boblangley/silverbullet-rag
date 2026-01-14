@@ -7,7 +7,6 @@ version: 0.1.0
 
 from typing import List, Union, Generator, Iterator
 from pydantic import BaseModel
-import os
 
 from ..db import GraphDB
 from ..parser import SpaceParser

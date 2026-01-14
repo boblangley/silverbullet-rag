@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 import real_ladybug as lb
 
 from ..embeddings import EmbeddingService
-from ..parser import Chunk, DataBlock, InlineAttribute, Transclusion
+from ..parser import Chunk
 
 logger = logging.getLogger(__name__)
 
@@ -490,7 +490,6 @@ class GraphDB:
             List of matching chunks with BM25 scores, sorted by relevance
         """
         import math
-        import re
 
         # Get all chunks for IDF calculation (scoped if specified)
         conn = lb.Connection(self.db)

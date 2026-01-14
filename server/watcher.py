@@ -61,7 +61,9 @@ class SpaceWatcher(FileSystemEventHandler):
             return True
 
         if current_hash == previous_hash:
-            logging.debug(f"Skipping {path} - content unchanged (hash: {current_hash[:8]}...)")
+            logging.debug(
+                f"Skipping {path} - content unchanged (hash: {current_hash[:8]}...)"
+            )
             return False
 
         return True

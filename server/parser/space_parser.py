@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import yaml
 from markdown_it import MarkdownIt
@@ -145,7 +145,9 @@ class SpaceParser:
 
         return chunks
 
-    def parse_file(self, file_path: str, expand_transclusions: bool = True) -> List[Chunk]:
+    def parse_file(
+        self, file_path: str, expand_transclusions: bool = True
+    ) -> List[Chunk]:
         """Parse a single markdown file into chunks.
 
         This is the public API for parsing individual files, useful for
