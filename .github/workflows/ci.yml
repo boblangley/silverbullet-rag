@@ -76,10 +76,13 @@ jobs:
       - name: Install linting tools
         run: |
           python -m pip install --upgrade pip
-          pip install black mypy
+          pip install ruff
 
-      - name: Check formatting with Black
-        run: black --check --diff server/ tests/
+      - name: Check linting with Ruff
+        run: ruff check server/ tests/
+
+      - name: Check formatting with Ruff
+        run: ruff format --check --diff server/ tests/
 
   build:
     runs-on: ubuntu-latest
