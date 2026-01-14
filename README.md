@@ -9,7 +9,8 @@ A RAG (Retrieval-Augmented Generation) system for [Silverbullet](https://silverb
 - **BM25 Keyword Search**: Tag boosting, technical term detection, header boosting
 - **Hybrid Search**: Combines keyword + semantic using Reciprocal Rank Fusion
 - **Silverbullet v2**: Transclusion expansion, inline attributes `[key: value]`, data blocks
-- **MCP Server**: 7 tools for AI assistants (Claude, Cursor, etc.)
+- **MCP Server**: 10 tools for AI assistants (Claude, Cursor, etc.)
+- **AI Proposals**: Propose changes for user review before applying
 - **gRPC API**: Fast access for Silverbullet hooks
 - **File Watcher**: Auto-reindex on changes
 
@@ -68,6 +69,9 @@ See [docs/mcp.md](docs/mcp.md) for Claude Code, Cursor, VS Code, and JetBrains s
 | `get_project_context` | Get project context by GitHub remote or folder path |
 | `read_page` | Read a Silverbullet page |
 | `update_page` | Create or update a page |
+| `propose_change` | Propose a change for user review (requires AI-Proposals library) |
+| `list_proposals` | List pending/accepted/rejected proposals |
+| `withdraw_proposal` | Withdraw a pending proposal |
 
 ## Configuration
 
@@ -112,6 +116,7 @@ Silverbullet Space → File Watcher → Space Parser → Embedding Service
 | [docs/grpc.md](docs/grpc.md) | gRPC client examples (Python, TypeScript, Rust, Go, C#) |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, testing, code quality |
 | [AGENTS.md](AGENTS.md) | Coding assistant instructions, architecture details |
+| [docs/design/silverbullet-proposal-plug.md](docs/design/silverbullet-proposal-plug.md) | AI Proposals system design |
 
 ## Graph Schema
 

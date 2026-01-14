@@ -32,7 +32,9 @@ Silverbullet Space (markdown files)
 | `GraphDB`          | `server/db/graph.py`            | LadybugDB wrapper with Cypher, BM25, and vector search           |
 | `EmbeddingService` | `server/embeddings.py`          | Embedding generation (OpenAI or local fastembed)                 |
 | `HybridSearch`     | `server/search/hybrid.py`       | Combines keyword + semantic search with RRF                      |
-| `MCP Server`       | `server/mcp_http_server.py`     | FastMCP HTTP server with 7 tools                                 |
+| `MCP Server`       | `server/mcp_http_server.py`     | FastMCP HTTP server with 10 tools                                |
+| `Proposals`        | `server/proposals.py`           | AI proposal management (propose, list, withdraw)                 |
+| `ConfigParser`     | `server/config_parser.py`       | Parse CONFIG.md space-lua blocks                                 |
 | `gRPC Server`      | `server/grpc_server.py`         | Fast binary protocol for hooks                                   |
 | `Watcher`          | `server/watcher.py`             | File system monitoring for auto-reindex                          |
 
@@ -198,3 +200,45 @@ Key dependencies:
 - `watchdog`: File system events
 
 See `pyproject.toml` for full dependency list.
+
+## AI Proposals System
+
+The proposal system allows AI assistants to suggest changes that users review before applying.
+
+### How It Works
+
+1. AI calls `propose_change` MCP tool with target page and proposed content
+2. System creates a `.proposal` file in `_Proposals/` folder
+3. User opens proposal in Silverbullet to see inline diff
+4. User clicks Accept (applies change) or Reject (moves to `_Rejected/`)
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `server/proposals.py` | Proposal management utilities |
+| `server/config_parser.py` | Parse CONFIG.md for settings |
+| `library/AI-Proposals/` | Silverbullet plug with document editor |
+
+### Configuration
+
+Users configure in their Silverbullet `CONFIG.md`:
+
+```space-lua
+config.set("mcp.proposals.path_prefix", "_Proposals/")
+config.set("mcp.proposals.cleanup_after_days", 30)
+```
+
+The watcher parses CONFIG.md and writes `space_config.json` for MCP server use.
+
+### Conditional Tool Registration
+
+Proposal tools are only enabled if the AI-Proposals library is installed:
+
+```python
+# In mcp_http_server.py
+if library_installed(space_path):
+    proposals_enabled = True
+```
+
+This prevents errors when the library isn't installed.
