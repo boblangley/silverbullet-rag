@@ -63,4 +63,9 @@ Thumbs.db
 server/grpc/*_pb2.py
 server/grpc/*_pb2_grpc.py
 server/grpc/*_pb2.pyi
+
+# Test results
+test-results/
+
+# MCP configuration (contains server URLs)
 .mcp.json
