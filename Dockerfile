@@ -15,6 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY server/ ./server/
 
+# Copy library files for installation tool
+COPY library/ ./library/
+
 # Create directories for database and space
 RUN mkdir -p /data /space
 
