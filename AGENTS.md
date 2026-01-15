@@ -176,10 +176,25 @@ Current relationships:
 
 Allows external tools to suggest changes users review before applying:
 1. Tool calls `propose_change` → creates `.proposal` file in `_Proposals/`
-2. User opens in Silverbullet → sees inline diff
+2. User opens in Silverbullet → sees inline diff via custom document editor
 3. Accept (applies) or Reject (moves to `_Rejected/`)
 
-Proposal tools only enabled if `library/Proposals/` is installed in the space.
+Proposal tools only enabled if `Library/Proposals.md` is installed in the space.
+
+### Library Structure
+
+The Proposals library in `library/` contains:
+- `Proposals.md` - Main library file with Space-Lua code (must have `tags: meta/library`)
+- `Proposals/Proposals.md` - Dashboard page
+- `Proposals/plug.yaml` - Plug manifest for document editor
+- `Proposals/proposal_editor.ts` - TypeScript source for `.proposal` file editor
+- `Proposals/Proposals.plug.js` - Compiled plug (committed, rebuild with deno)
+
+To rebuild the plug after changes to `proposal_editor.ts`:
+```bash
+cd test-data/silverbullet
+deno run -A bin/plug-compile.ts ../../library/Proposals/plug.yaml --dist ../../library/Proposals --config deno.json
+```
 
 ## Open WebUI Pipe
 

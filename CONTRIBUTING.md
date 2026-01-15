@@ -111,6 +111,9 @@ The easiest way to run integration tests is using the provided script:
 # Run only gRPC tests
 ./scripts/run-integration-tests.sh --grpc
 
+# Run E2E tests with real Silverbullet instance
+./scripts/run-integration-tests.sh --e2e
+
 # Keep containers running after tests (for debugging)
 ./scripts/run-integration-tests.sh --keep
 ```
@@ -169,6 +172,26 @@ python -m server.grpc_server
 # Terminal 2: Run gRPC integration tests
 RUN_INTEGRATION_TESTS=true pytest tests/test_grpc_server.py -v
 ```
+
+#### E2E Tests with Silverbullet
+
+End-to-end tests run against a real Silverbullet instance alongside the MCP server. These verify:
+- Library installation appears in Silverbullet
+- Proposals are created as files in the space
+- Search functionality works with indexed content
+
+```bash
+# Run E2E tests via Docker Compose
+./scripts/run-integration-tests.sh --e2e
+
+# Or run directly with pytest
+RUN_E2E_TESTS=true pytest tests/test_e2e_silverbullet.py -v
+```
+
+The E2E tests use the `e2e` Docker Compose profile which starts:
+- Silverbullet container (`ghcr.io/silverbulletmd/silverbullet`)
+- MCP server with read-write space access
+- Test runner with access to both services
 
 #### OpenAI Embedding Tests
 
@@ -256,6 +279,22 @@ python -m grpc_tools.protoc \
   --grpc_python_out=server/grpc \
   server/grpc/rag.proto
 ```
+
+## Compiling Silverbullet Plugs
+
+The Proposals library includes a TypeScript plug that must be compiled to JavaScript. The dev container includes Deno for this purpose.
+
+To compile the Proposals plug:
+
+```bash
+cd test-data/silverbullet
+deno run -A bin/plug-compile.ts \
+  ../../library/Proposals/plug.yaml \
+  --dist ../../library/Proposals \
+  --config deno.json
+```
+
+The compiled `Proposals.plug.js` should be committed to the repository.
 
 ## Project Structure
 
