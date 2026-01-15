@@ -1,13 +1,13 @@
 ---
-displayName: AI Proposals
-description: Review and manage AI-proposed changes to your Silverbullet space
+displayName: Proposals
+description: Review and manage proposed changes to your Silverbullet space
 author: silverbullet-rag
 version: 1.0.0
 ---
 
-# AI Proposals Library
+# Proposals Library
 
-This library enables AI assistants to propose changes to your Silverbullet space.
+This library enables external tools to propose changes to your Silverbullet space.
 You can review, accept, or reject these proposals before they modify your content.
 
 ## Features
@@ -31,7 +31,7 @@ config.set("mcp.proposals.cleanup_after_days", 30)
 
 ## Commands
 
-- **AI: View Proposals** - Navigate to the proposals dashboard
+- **Proposals: View All** - Navigate to the proposals dashboard
 
 ## Top Widget
 
@@ -70,9 +70,9 @@ end)
 
 ```space-lua
 command.define {
-  name = "AI: View Proposals",
+  name = "Proposals: View All",
   run = function()
-    editor.navigate("Library/AI-Proposals/Proposals")
+    editor.navigate("Library/Proposals/Proposals")
   end
 }
 ```
@@ -115,4 +115,4 @@ end)
 
 ## See Also
 
-- [[Library/AI-Proposals/Proposals]] - View all proposals
+- [[Library/Proposals/Proposals]] - View all proposals

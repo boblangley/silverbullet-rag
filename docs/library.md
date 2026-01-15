@@ -1,10 +1,10 @@
-# AI-Proposals Library
+# Proposals Library
 
-The AI-Proposals library enables AI assistants to propose changes to your Silverbullet space. Instead of directly modifying pages, AI assistants create `.proposal` files that you can review with inline diffs and accept or reject.
+The Proposals library enables external tools to propose changes to your Silverbullet space. Instead of directly modifying pages, tools create `.proposal` files that you can review with inline diffs and accept or reject.
 
 ## Why Proposals?
 
-Direct page editing by AI can be risky:
+Direct page editing by external tools can be risky:
 - Changes might not match your intent
 - Formatting or structure could be disrupted
 - Important content might be accidentally removed
@@ -20,22 +20,22 @@ Use Silverbullet's built-in Library Manager:
 
 1. Run the `Library: Manager` command in Silverbullet
 2. Add this repository to your repositories list
-3. Install the AI-Proposals library
+3. Install the Proposals library
 
-The library installs to `Library/AI-Proposals/` in your space.
+The library installs to `Library/Proposals/` in your space.
 
 ## How It Works
 
 ### MCP/gRPC Proposal Flow
 
-1. **AI creates proposal**: When an AI assistant wants to modify a page, it calls `propose_change` instead of directly writing
+1. **Tool creates proposal**: When an external tool wants to modify a page, it calls `propose_change` instead of directly writing
 2. **Proposal file created**: A `.proposal` file is created in `_Proposals/` with the proposed content and metadata
 3. **User notification**: A banner appears in Silverbullet when you view a page with pending proposals
 4. **Review with diff**: Open the proposal to see an inline diff of changes
 5. **Accept or reject**: Click Accept to apply changes, or Reject to dismiss
 
 ```
-AI Assistant                    Silverbullet Space
+External Tool                   Silverbullet Space
      │                                 │
      │  propose_change(...)            │
      │────────────────────────────────>│
@@ -82,7 +82,7 @@ is_new_page: false
 
 ## MCP Tools
 
-When the AI-Proposals library is installed, these MCP tools become available:
+When the Proposals library is installed, these MCP tools become available:
 
 ### propose_change
 
@@ -151,7 +151,7 @@ List proposals by status.
 
 ### withdraw_proposal
 
-Withdraw a pending proposal (e.g., if the AI made a mistake).
+Withdraw a pending proposal (e.g., if a mistake was made).
 
 ```json
 {
@@ -223,7 +223,7 @@ Click the proposal link to review it.
 
 ### Proposal Dashboard
 
-View all proposals in one place at `Library/AI-Proposals/Proposals`:
+View all proposals in one place at `Library/Proposals/Proposals`:
 
 - **Pending Proposals**: Awaiting your review
 - **Recently Accepted**: Successfully applied
@@ -242,7 +242,7 @@ The `.proposal` file extension triggers a custom editor that shows:
 
 Rejected proposals are automatically cleaned up after the configured number of days (default: 30). This prevents clutter while giving you time to reconsider.
 
-## Best Practices for AI Assistants
+## Best Practices
 
 When using the proposal system:
 
@@ -253,9 +253,9 @@ When using the proposal system:
 
 ## Troubleshooting
 
-### "AI-Proposals library not installed"
+### "Proposals library not installed"
 
-The MCP/gRPC server checks for `Library/AI-Proposals.md` in your space. Install the library using the Library Manager.
+The MCP/gRPC server checks for `Library/Proposals.md` in your space. Install the library using the Library Manager.
 
 ### Proposals not appearing
 

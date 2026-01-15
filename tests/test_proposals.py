@@ -26,12 +26,12 @@ class TestLibraryInstalled:
         """Test when library is installed."""
         library_dir = tmp_path / "Library"
         library_dir.mkdir()
-        (library_dir / "AI-Proposals.md").write_text("# AI Proposals")
+        (library_dir / "Proposals.md").write_text("# Proposals")
 
         assert library_installed(tmp_path) is True
 
     def test_library_dir_exists_but_no_file(self, tmp_path: Path):
-        """Test when Library dir exists but AI-Proposals.md doesn't."""
+        """Test when Library dir exists but Proposals.md doesn't."""
         library_dir = tmp_path / "Library"
         library_dir.mkdir()
 

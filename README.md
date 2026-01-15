@@ -1,6 +1,6 @@
 # Silverbullet RAG
 
-A RAG (Retrieval-Augmented Generation) system for [Silverbullet](https://silverbullet.md) that indexes your knowledge base into a searchable graph with vector embeddings, exposed via MCP and gRPC for AI assistant integration.
+A RAG (Retrieval-Augmented Generation) system for [Silverbullet](https://silverbullet.md) that indexes your knowledge base into a searchable graph with vector embeddings, exposed via MCP for AI assistant integration and gRPC for automation/programmatic use.
 
 ## Features
 
@@ -10,7 +10,7 @@ A RAG (Retrieval-Augmented Generation) system for [Silverbullet](https://silverb
 - **Hybrid Search**: Combines keyword + semantic using Reciprocal Rank Fusion
 - **Silverbullet v2**: Transclusion expansion, inline attributes `[key: value]`, data blocks
 - **MCP Server**: 9 tools for AI assistants (Claude, Cursor, etc.)
-- **AI Proposals**: Propose changes for user review before applying
+- **Proposals**: Propose changes for user review before applying
 - **gRPC API**: Fast access for Silverbullet hooks
 - **File Watcher**: Auto-reindex on changes
 
@@ -68,13 +68,13 @@ See [docs/mcp.md](docs/mcp.md) for Claude Code, Cursor, VS Code, and JetBrains s
 | `hybrid_search_tool` | Combined keyword + semantic with RRF fusion |
 | `get_project_context` | Get project context by GitHub remote or folder path |
 | `read_page` | Read a Silverbullet page |
-| `propose_change` | Propose a change for user review (requires AI-Proposals library) |
+| `propose_change` | Propose a change for user review (requires Proposals library) |
 | `list_proposals` | List pending/accepted/rejected proposals |
 | `withdraw_proposal` | Withdraw a pending proposal |
 
 ## Silverbullet Library
 
-This project includes the **AI-Proposals** library for Silverbullet that enables AI assistants to propose changes for user review. Instead of directly modifying pages, AI assistants create proposals that you can review with inline diffs and accept or reject.
+This project includes the **Proposals** library for Silverbullet that enables external tools to propose changes for user review. Instead of directly modifying pages, tools create proposals that you can review with inline diffs and accept or reject.
 
 ### Installing the Library
 
@@ -82,7 +82,7 @@ Use Silverbullet's built-in Library Manager:
 
 1. Run the `Library: Manager` command in Silverbullet
 2. Add this repository to your repositories list
-3. Install the AI-Proposals library
+3. Install the Proposals library
 
 Once installed, the proposal MCP tools become available, and you can review proposals directly in Silverbullet.
 
@@ -129,7 +129,7 @@ Silverbullet Space → File Watcher → Space Parser → Embedding Service
 | [docs/deployment.md](docs/deployment.md) | Docker setup, compose files, production config |
 | [docs/mcp.md](docs/mcp.md) | MCP integration for various AI assistants |
 | [docs/grpc.md](docs/grpc.md) | gRPC client examples (Python, TypeScript, Rust, Go, C#) |
-| [docs/library.md](docs/library.md) | AI-Proposals Silverbullet library |
+| [docs/library.md](docs/library.md) | Proposals Silverbullet library |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, testing, code quality |
 | [AGENTS.md](AGENTS.md) | Coding assistant instructions, architecture details |
 

@@ -155,7 +155,7 @@ class TestMCPHTTPServer:
     async def test_propose_change_tool_disabled(self, temp_space_path, monkeypatch):
         """GREEN: Test propose_change returns error when library not installed.
 
-        This should PASS - proposal tools disabled without AI-Proposals library.
+        This should PASS - proposal tools disabled without Proposals library.
         """
         from server.mcp_http_server import propose_change
         import server.mcp_http_server as mcp_module

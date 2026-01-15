@@ -1,7 +1,7 @@
 {
-  "name": "AI-Proposals",
+  "name": "Proposals",
   "version": "1.0.0",
-  "description": "Review and manage AI-proposed changes to your Silverbullet space",
+  "description": "Review and manage proposed changes to your Silverbullet space",
   "author": "silverbullet-rag",
   "functions": {
     "proposalEditor": {

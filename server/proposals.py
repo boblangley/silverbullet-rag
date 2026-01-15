@@ -1,7 +1,7 @@
 """
-Proposal management for Silverbullet AI-Proposals system.
+Proposal management for Silverbullet Proposals system.
 
-This module provides utilities for managing change proposals that AI assistants
+This module provides utilities for managing change proposals that external tools
 can create for user review. Proposals are stored as .proposal files in the
 Silverbullet space.
 """
@@ -17,9 +17,9 @@ from .config_parser import load_config_json
 
 
 def library_installed(space_path: Path) -> bool:
-    """Check if AI-Proposals library is installed in the space.
+    """Check if Proposals library is installed in the space.
 
-    The library is considered installed if Library/AI-Proposals.md exists.
+    The library is considered installed if Library/Proposals.md exists.
 
     Args:
         space_path: Path to the Silverbullet space
@@ -27,7 +27,7 @@ def library_installed(space_path: Path) -> bool:
     Returns:
         True if library marker file exists
     """
-    library_marker = space_path / "Library" / "AI-Proposals.md"
+    library_marker = space_path / "Library" / "Proposals.md"
     return library_marker.exists()
 
 

@@ -19,7 +19,7 @@ Silverbullet RAG exposes a [Model Context Protocol (MCP)](https://modelcontextpr
 | `hybrid_search_tool`  | Combined keyword + semantic search with RRF fusion  |
 | `get_project_context` | Get project context by GitHub remote or folder path |
 | `read_page`           | Read contents of a Silverbullet page                |
-| `propose_change`      | Propose a change for user review (requires AI-Proposals library) |
+| `propose_change`      | Propose a change for user review (requires Proposals library) |
 | `list_proposals`      | List pending/accepted/rejected proposals            |
 | `withdraw_proposal`   | Withdraw a pending proposal                         |
 
@@ -402,7 +402,7 @@ Read contents of a Silverbullet page.
 
 ### propose_change
 
-Propose a change to a page for user review. Requires the AI-Proposals library installed in the Silverbullet space.
+Propose a change to a page for user review. Requires the Proposals library installed in the Silverbullet space.
 
 ```json
 {

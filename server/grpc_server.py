@@ -150,10 +150,10 @@ class RAGServiceServicer(rag_pb2_grpc.RAGServiceServicer):
         if not self.proposals_enabled:
             return rag_pb2.ProposeChangeResponse(
                 success=False,
-                error="AI-Proposals library not installed",
+                error="Proposals library not installed",
                 proposal_path="",
                 is_new_page=False,
-                message="Install the AI-Proposals library from Library Manager",
+                message="Install the Proposals library from Library Manager",
             )
 
         try:
@@ -212,7 +212,7 @@ class RAGServiceServicer(rag_pb2_grpc.RAGServiceServicer):
         if not self.proposals_enabled:
             return rag_pb2.ListProposalsResponse(
                 success=False,
-                error="AI-Proposals library not installed",
+                error="Proposals library not installed",
                 count=0,
                 proposals=[],
             )
@@ -257,7 +257,7 @@ class RAGServiceServicer(rag_pb2_grpc.RAGServiceServicer):
         if not self.proposals_enabled:
             return rag_pb2.WithdrawProposalResponse(
                 success=False,
-                error="AI-Proposals library not installed",
+                error="Proposals library not installed",
                 message="",
             )
 

@@ -319,7 +319,7 @@ async def propose_change(
     description: str,
 ) -> Dict[str, Any]:
     """
-    Propose a change to a page. Requires AI-Proposals library installed.
+    Propose a change to a page. Requires Proposals library installed.
 
     Creates a proposal that the user can review and apply in Silverbullet.
     The change is NOT applied until the user accepts it.
@@ -336,8 +336,8 @@ async def propose_change(
     if not proposals_enabled:
         return {
             "success": False,
-            "error": "AI-Proposals library not installed",
-            "instructions": "Install the AI-Proposals library from Library Manager",
+            "error": "Proposals library not installed",
+            "instructions": "Install the Proposals library from Library Manager",
         }
 
     try:
@@ -395,7 +395,7 @@ async def list_proposals(status: str = "pending") -> Dict[str, Any]:
         List of proposals with summary information
     """
     if not proposals_enabled:
-        return {"success": False, "error": "AI-Proposals library not installed"}
+        return {"success": False, "error": "Proposals library not installed"}
 
     try:
         space_path = Path(os.getenv("SPACE_PATH", "/space"))
@@ -425,7 +425,7 @@ async def withdraw_proposal(proposal_path: str) -> Dict[str, Any]:
         Success confirmation
     """
     if not proposals_enabled:
-        return {"success": False, "error": "AI-Proposals library not installed"}
+        return {"success": False, "error": "Proposals library not installed"}
 
     try:
         space_path = Path(os.getenv("SPACE_PATH", "/space"))
@@ -474,13 +474,13 @@ async def initialize_server():
     # Initialize hybrid search
     hybrid_search = HybridSearch(graph_db)
 
-    # Check if AI-Proposals library is installed
+    # Check if Proposals library is installed
     space_path_obj = Path(space_path)
     if library_installed(space_path_obj):
         proposals_enabled = True
-        logger.info("AI-Proposals library found, proposal tools enabled")
+        logger.info("Proposals library found, proposal tools enabled")
     else:
-        logger.info("AI-Proposals library not installed, proposal tools disabled")
+        logger.info("Proposals library not installed, proposal tools disabled")
 
     logger.info("Server initialization complete!")
 

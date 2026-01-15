@@ -1,5 +1,5 @@
 ---
-displayName: AI Proposals
+displayName: Proposals
 ---
 #meta
 
@@ -9,7 +9,7 @@ ${query[[
   from index.tag "proposal"
   where status = "pending"
   order by created_at desc
-  render [[Library/AI-Proposals/Templates/ProposalRow]]
+  render [[Library/Proposals/Templates/ProposalRow]]
 ]]}
 
 # Recently Accepted
@@ -19,7 +19,7 @@ ${query[[
   where status = "accepted"
   order by created_at desc
   limit 10
-  render [[Library/AI-Proposals/Templates/ProposalRow]]
+  render [[Library/Proposals/Templates/ProposalRow]]
 ]]}
 
 # Recently Rejected
@@ -29,5 +29,5 @@ ${query[[
   where status = "rejected"
   order by created_at desc
   limit 10
-  render [[Library/AI-Proposals/Templates/ProposalRow]]
+  render [[Library/Proposals/Templates/ProposalRow]]
 ]]}

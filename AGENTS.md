@@ -33,7 +33,7 @@ Silverbullet Space (markdown files)
 | `EmbeddingService` | `server/embeddings.py`          | Embedding generation (OpenAI or local fastembed)                 |
 | `HybridSearch`     | `server/search/hybrid.py`       | Combines keyword + semantic search with RRF                      |
 | `MCP Server`       | `server/mcp_http_server.py`     | FastMCP HTTP server with 9 tools                                 |
-| `Proposals`        | `server/proposals.py`           | AI proposal management (propose, list, withdraw)                 |
+| `Proposals`        | `server/proposals.py`           | Proposal management (propose, list, withdraw)                    |
 | `ConfigParser`     | `server/config_parser.py`       | Parse CONFIG.md space-lua blocks                                 |
 | `gRPC Server`      | `server/grpc_server.py`         | Fast binary protocol for hooks                                   |
 | `Watcher`          | `server/watcher.py`             | File system monitoring for auto-reindex                          |
@@ -218,13 +218,13 @@ Key dependencies:
 
 See `pyproject.toml` for full dependency list.
 
-## AI Proposals System
+## Proposals System
 
-The proposal system allows AI assistants to suggest changes that users review before applying.
+The proposal system allows external tools to suggest changes that users review before applying.
 
 ### How It Works
 
-1. AI calls `propose_change` MCP tool with target page and proposed content
+1. Tool calls `propose_change` MCP/gRPC method with target page and proposed content
 2. System creates a `.proposal` file in `_Proposals/` folder
 3. User opens proposal in Silverbullet to see inline diff
 4. User clicks Accept (applies change) or Reject (moves to `_Rejected/`)
@@ -235,7 +235,7 @@ The proposal system allows AI assistants to suggest changes that users review be
 |------|---------|
 | `server/proposals.py` | Proposal management utilities |
 | `server/config_parser.py` | Parse CONFIG.md for settings |
-| `library/AI-Proposals/` | Silverbullet plug with document editor |
+| `library/Proposals/` | Silverbullet plug with document editor |
 
 ### Configuration
 
@@ -250,7 +250,7 @@ The watcher parses CONFIG.md and writes `space_config.json` for MCP server use.
 
 ### Conditional Tool Registration
 
-Proposal tools are only enabled if the AI-Proposals library is installed:
+Proposal tools are only enabled if the Proposals library is installed:
 
 ```python
 # In mcp_http_server.py
