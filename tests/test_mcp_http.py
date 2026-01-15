@@ -77,11 +77,15 @@ class TestMCPHTTPServer:
         This should PASS now that server/mcp/ package exists.
         """
         try:
-            from server.mcp import mcp
+            from server.mcp import create_mcp_server
             from server.mcp.dependencies import initialize
 
-            assert mcp is not None
+            assert callable(create_mcp_server)
             assert callable(initialize)
+
+            # Verify we can create a server instance
+            server = create_mcp_server(port=9999)
+            assert server is not None
         except ImportError as e:
             pytest.fail(f"FastMCP server module not found: {e}")
 
