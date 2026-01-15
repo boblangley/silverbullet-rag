@@ -87,6 +87,8 @@ Use semantic versioning without the `v` prefix:
 - `0.2.0` ✓ (correct)
 - `v0.2.0` ✗ (incorrect - don't use `v` prefix)
 
+A pre-push hook validates this. Run `scripts/install-hooks.sh` to install it.
+
 ### File Organization
 
 ```
@@ -165,189 +167,23 @@ Current relationships:
 
 ## Common Tasks
 
-### Adding a New MCP Tool
-
-1. Add the tool function in the appropriate `server/mcp/tools/` module:
-   ```python
-   # In server/mcp/tools/search.py (or pages.py, proposals.py as appropriate)
-   async def my_tool(arg: str) -> Dict[str, Any]:
-       """Tool description for LLM."""
-       try:
-           deps = get_dependencies()
-           # implementation using deps.graph_db, deps.space_parser, etc.
-           return {"success": True, "result": ...}
-       except Exception as e:
-           return {"success": False, "error": str(e)}
-   ```
-
-2. Register the tool in `server/mcp/tools/__init__.py`:
-   ```python
-   from .search import my_tool
-
-   def register_tools(mcp: FastMCP) -> None:
-       # ... existing tools ...
-       mcp.tool()(my_tool)
-   ```
-
-2. Add tests in `tests/test_mcp_http.py`
-3. Update `README.md` features section
-
-### Adding a New Graph Relationship
-
-1. Add schema in `GraphDB.__init__`:
-   ```python
-   conn.execute("CREATE REL TABLE IF NOT EXISTS NEW_REL(FROM NodeA TO NodeB, prop STRING)")
-   ```
-
-2. Create relationships in `index_chunks`:
-   ```python
-   conn.execute(
-       "MERGE (a:NodeA {id: $a_id})-[:NEW_REL {prop: $prop}]->(b:NodeB {id: $b_id})",
-       {"a_id": ..., "b_id": ..., "prop": ...}
-   )
-   ```
-
-3. Clean up in `delete_chunks_by_file` and `clear_database`
-4. Update README Graph Schema section
-5. Add tests
-
-### Modifying the Parser
-
-1. Update `SpaceParser` in `server/parser/space_parser.py`
-2. Update `Chunk` dataclass if adding new fields
-3. Export new classes from `server/parser/__init__.py`
-4. Add tests in `tests/test_v2_features.py` or create new test file
-
-### Building the Open WebUI Pipe
-
-The Open WebUI pipe (`openwebui/silverbullet_rag.py`) is a **generated file** that embeds
-the protobuf stubs for single-file deployment to Open WebUI.
-
-**When to rebuild**: After modifying `proto/rag.proto` (adding/changing gRPC methods).
-
-```bash
-python scripts/build_openwebui_pipe.py
-```
-
-This script:
-1. Compiles `proto/rag.proto` using `grpc_tools.protoc`
-2. Generates server stubs to `server/grpc/`
-3. Extracts client code and merges it into `openwebui/silverbullet_rag.py`
-
-**Note**: The pipe logic (the `Pipe` class) is defined in the build script's `PIPE_TEMPLATE`.
-To modify pipe behavior, edit `scripts/build_openwebui_pipe.py` and re-run the build.
-
-## Debugging Tips
-
-- **LadybugDB issues**: Check database file permissions, try `--rebuild` flag
-- **Embedding failures**: Verify `OPENAI_API_KEY`, check rate limits
-- **Parser issues**: Use `SpaceParser._extract_*` methods for isolated testing
-- **gRPC issues**: Rebuild with `python scripts/build_openwebui_pipe.py`
-
-## Dependencies
-
-Key dependencies:
-- `real-ladybug`: LadybugDB Python client
-- `mcp`: Model Context Protocol SDK
-- `markdown-it-py`: Markdown AST parsing
-- `openai`: Embedding generation
-- `grpcio`: gRPC server/client
-- `watchdog`: File system events
-
-See `pyproject.toml` for full dependency list.
+- **MCP tools**: Add to `server/mcp/tools/`, register in `__init__.py`, test in `test_mcp_http.py`
+- **Graph relationships**: Add schema in `GraphDB.__init__`, update `README.md` Graph Schema
+- **Parser changes**: Update `SpaceParser`, `Chunk` dataclass, export from `__init__.py`
+- **Open WebUI pipe**: Run `python scripts/build_openwebui_pipe.py` after proto changes
 
 ## Proposals System
 
-The proposal system allows external tools to suggest changes that users review before applying.
+Allows external tools to suggest changes users review before applying:
+1. Tool calls `propose_change` → creates `.proposal` file in `_Proposals/`
+2. User opens in Silverbullet → sees inline diff
+3. Accept (applies) or Reject (moves to `_Rejected/`)
 
-### How It Works
-
-1. Tool calls `propose_change` MCP/gRPC method with target page and proposed content
-2. System creates a `.proposal` file in `_Proposals/` folder
-3. User opens proposal in Silverbullet to see inline diff
-4. User clicks Accept (applies change) or Reject (moves to `_Rejected/`)
-
-### Key Files
-
-| File | Purpose |
-|------|---------|
-| `server/proposals.py` | Proposal management utilities |
-| `server/config_parser.py` | Parse CONFIG.md for settings |
-| `library/Proposals/` | Silverbullet plug with document editor |
-
-### Configuration
-
-Users configure in their Silverbullet `CONFIG.md`:
-
-```space-lua
-config.set("mcp.proposals.path_prefix", "_Proposals/")
-config.set("mcp.proposals.cleanup_after_days", 30)
-```
-
-The watcher parses CONFIG.md and writes `space_config.json` for MCP server use.
-
-### Conditional Tool Registration
-
-Proposal tools are only enabled if the Proposals library is installed:
-
-```python
-# In server/mcp/dependencies.py
-if library_installed(space_path):
-    proposals_enabled = True
-```
-
-This prevents errors when the library isn't installed.
+Proposal tools only enabled if `library/Proposals/` is installed in the space.
 
 ## Open WebUI Pipe
 
-The Open WebUI pipe (`openwebui/silverbullet_rag.py`) integrates Silverbullet RAG with [Open WebUI](https://openwebui.com/) for context-aware chat.
-
-### Architecture
-
-The pipe is a **single-file gRPC client** that embeds protobuf stubs for easy deployment:
-
-```
-Open WebUI Chat → Pipe (inlet) → gRPC Server → LadybugDB
-                                      ↓
-                              Search Results
-                                      ↓
-                  Pipe (inject context) → LLM
-```
-
-### Folder Context Mapping
-
-The pipe supports automatic project context injection using the `openwebui-folder` frontmatter property:
-
-1. User creates a Silverbullet page with frontmatter:
-   ```yaml
-   ---
-   openwebui-folder: Projects/MyProject
-   ---
-   ```
-
-2. User creates matching folder in Open WebUI: `Projects/MyProject`
-
-3. When chatting in that folder:
-   - Pipe calls `GetFolderContext` RPC to find matching page
-   - Full page content is injected as "Project Context"
-   - Searches are scoped to the Silverbullet folder
-
-### Key gRPC Methods Used
-
-| Method | Purpose |
-|--------|---------|
-| `GetFolderContext` | Find page by `openwebui-folder` frontmatter |
-| `HybridSearch` | Combined keyword + semantic search |
-| `SemanticSearch` | Vector similarity search |
-| `Search` | BM25 keyword search |
-
-### Modifying the Pipe
-
-The pipe logic is defined in `scripts/build_openwebui_pipe.py` in the `PIPE_TEMPLATE` variable.
-
-To modify:
-1. Edit the `PIPE_TEMPLATE` in `scripts/build_openwebui_pipe.py`
-2. Run `python scripts/build_openwebui_pipe.py` to regenerate
-3. Upload the new `openwebui/silverbullet_rag.py` to Open WebUI
-
-See [docs/openwebui-pipe.md](docs/openwebui-pipe.md) for detailed setup instructions.
+See [docs/openwebui-pipe.md](docs/openwebui-pipe.md) for setup. Key points:
+- Generated file embedding protobuf stubs for single-file deployment
+- Rebuild with `python scripts/build_openwebui_pipe.py` after proto changes
+- Pipe logic is in `PIPE_TEMPLATE` in the build script
