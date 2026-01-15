@@ -30,6 +30,9 @@ service RAGService {
 
   // Get context for an Open WebUI folder (finds pages with matching openwebui-folder frontmatter)
   rpc GetFolderContext(GetFolderContextRequest) returns (GetFolderContextResponse);
+
+  // Get project context by GitHub remote or folder path
+  rpc GetProjectContext(GetProjectContextRequest) returns (GetProjectContextResponse);
 }
 
 message QueryRequest {
@@ -155,4 +158,30 @@ message GetFolderContextResponse {
   string page_name = 4;  // Name of the matched page
   string page_content = 5;  // Full content of the matched page
   string folder_scope = 6;  // Silverbullet folder to scope searches to
+}
+
+// GetProjectContext messages
+message GetProjectContextRequest {
+  string github_remote = 1;  // GitHub repository in "owner/repo" format
+  string folder_path = 2;    // Folder path in Silverbullet space (e.g., "Projects/MyProject")
+}
+
+message RelatedPage {
+  string name = 1;
+  string path = 2;
+}
+
+message ProjectInfo {
+  string file = 1;           // Relative path to project file
+  string github = 2;         // GitHub remote if set
+  repeated string tags = 3;  // Tags from frontmatter
+  repeated string concerns = 4;  // Concerns from frontmatter
+  string content = 5;        // Page content (frontmatter stripped)
+}
+
+message GetProjectContextResponse {
+  bool success = 1;
+  string error = 2;
+  ProjectInfo project = 3;
+  repeated RelatedPage related_pages = 4;
 }

@@ -400,6 +400,137 @@ class RAGServiceServicer(rag_pb2_grpc.RAGServiceServicer):
                 folder_scope="",
             )
 
+    def GetProjectContext(self, request, context):
+        """Get project context by GitHub remote or folder path.
+
+        Finds and returns the project index page and related metadata.
+        """
+        try:
+            github_remote = request.github_remote or None
+            folder_path = request.folder_path or None
+
+            if not github_remote and not folder_path:
+                return rag_pb2.GetProjectContextResponse(
+                    success=False,
+                    error="Must provide either github_remote or folder_path",
+                    project=None,
+                    related_pages=[],
+                )
+
+            project_file = None
+            frontmatter = {}
+
+            # Search by GitHub remote
+            if github_remote:
+                for md_file in self.space_path.glob("**/*.md"):
+                    fm = self.parser.get_frontmatter(str(md_file))
+                    if fm.get("github") == github_remote:
+                        project_file = md_file
+                        frontmatter = fm
+                        break
+
+            # Search by folder path
+            elif folder_path:
+                # In Silverbullet, folder index is Folder.md (sibling), not Folder/index.md
+                parts = folder_path.split("/")
+                if len(parts) > 1:
+                    parent = "/".join(parts[:-1])
+                    index_file = self.space_path / parent / f"{parts[-1]}.md"
+                else:
+                    index_file = self.space_path / f"{folder_path}.md"
+
+                if index_file.exists():
+                    project_file = index_file
+                    frontmatter = self.parser.get_frontmatter(str(index_file))
+                else:
+                    # Try looking for any .md file in the folder with project metadata
+                    folder_dir = self.space_path / folder_path
+                    if folder_dir.exists() and folder_dir.is_dir():
+                        for md_file in folder_dir.glob("*.md"):
+                            fm = self.parser.get_frontmatter(str(md_file))
+                            if fm:
+                                project_file = md_file
+                                frontmatter = fm
+                                break
+
+            if not project_file:
+                return rag_pb2.GetProjectContextResponse(
+                    success=False,
+                    error=f"No project found for github_remote={github_remote}, folder_path={folder_path}",
+                    project=None,
+                    related_pages=[],
+                )
+
+            # Read the project file content
+            content = project_file.read_text(encoding="utf-8")
+
+            # Strip frontmatter from content for display
+            clean_content = self.parser._strip_frontmatter(content)
+
+            # Get related pages from the same folder
+            relative_path = project_file.relative_to(self.space_path)
+            folder = relative_path.parent
+
+            related_pages = []
+            if folder != Path("."):
+                folder_dir = self.space_path / folder
+                for md_file in folder_dir.glob("*.md"):
+                    if md_file != project_file:
+                        related_pages.append(
+                            rag_pb2.RelatedPage(
+                                name=md_file.stem,
+                                path=str(md_file.relative_to(self.space_path)),
+                            )
+                        )
+
+            # Also check for subdirectory matching the project file name
+            project_subdir = project_file.parent / project_file.stem
+            if project_subdir.exists() and project_subdir.is_dir():
+                for md_file in project_subdir.glob("**/*.md"):
+                    related_pages.append(
+                        rag_pb2.RelatedPage(
+                            name=md_file.stem,
+                            path=str(md_file.relative_to(self.space_path)),
+                        )
+                    )
+
+            # Build project info
+            tags = frontmatter.get("tags", [])
+            if isinstance(tags, str):
+                tags = [tags]
+            concerns = frontmatter.get("concerns", [])
+            if isinstance(concerns, str):
+                concerns = [concerns]
+
+            project_info = rag_pb2.ProjectInfo(
+                file=str(relative_path),
+                github=frontmatter.get("github", ""),
+                tags=tags,
+                concerns=concerns,
+                content=clean_content,
+            )
+
+            logging.info(
+                f"Found project context: file={relative_path}, "
+                f"github={frontmatter.get('github')}, "
+                f"related_pages={len(related_pages)}"
+            )
+
+            return rag_pb2.GetProjectContextResponse(
+                success=True,
+                error="",
+                project=project_info,
+                related_pages=related_pages[:20],
+            )
+        except Exception as e:
+            logging.error(f"GetProjectContext error: {e}")
+            return rag_pb2.GetProjectContextResponse(
+                success=False,
+                error=str(e),
+                project=None,
+                related_pages=[],
+            )
+
 
 async def serve(db_path="/db", space_path="/space"):
     """Run the gRPC server.
