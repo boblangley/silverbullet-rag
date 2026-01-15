@@ -83,22 +83,88 @@ class TestGRPCServer:
         )
         assert response.success is True
 
-    def test_update_page_rpc_structure(self):
-        """RED: Test UpdatePage RPC message structure.
-
-        This should FAIL because proto files don't exist.
-        """
+    def test_read_page_rpc_structure(self):
+        """Test ReadPage RPC message structure."""
         from server.grpc import rag_pb2
 
-        # Test UpdatePageRequest structure
-        request = rag_pb2.UpdatePageRequest(
-            page_name="test.md", content="# Test Page\n\nContent"
-        )
+        # Test ReadPageRequest structure
+        request = rag_pb2.ReadPageRequest(page_name="test.md")
         assert request.page_name == "test.md"
-        assert "Test Page" in request.content
 
-        # Test UpdatePageResponse structure
-        response = rag_pb2.UpdatePageResponse(success=True, error="")
+        # Test ReadPageResponse structure
+        response = rag_pb2.ReadPageResponse(
+            success=True, error="", content="# Test Page\n\nContent"
+        )
+        assert response.success is True
+        assert "Test Page" in response.content
+
+    def test_propose_change_rpc_structure(self):
+        """Test ProposeChange RPC message structure."""
+        from server.grpc import rag_pb2
+
+        # Test ProposeChangeRequest structure
+        request = rag_pb2.ProposeChangeRequest(
+            target_page="Projects/MyProject.md",
+            content="# Updated Content",
+            title="Update project docs",
+            description="Adding new section",
+        )
+        assert request.target_page == "Projects/MyProject.md"
+        assert request.title == "Update project docs"
+
+        # Test ProposeChangeResponse structure
+        response = rag_pb2.ProposeChangeResponse(
+            success=True,
+            error="",
+            proposal_path="_Proposals/Projects/MyProject.md.proposal",
+            is_new_page=False,
+            message="Proposal created",
+        )
+        assert response.success is True
+        assert response.proposal_path.endswith(".proposal")
+
+    def test_list_proposals_rpc_structure(self):
+        """Test ListProposals RPC message structure."""
+        from server.grpc import rag_pb2
+
+        # Test ListProposalsRequest structure
+        request = rag_pb2.ListProposalsRequest(status="pending")
+        assert request.status == "pending"
+
+        # Test ProposalInfo structure
+        proposal_info = rag_pb2.ProposalInfo(
+            path="_Proposals/test.md.proposal",
+            target_page="test.md",
+            title="Test proposal",
+            description="Test description",
+            status="pending",
+            is_new_page=False,
+            proposed_by="claude-code",
+            created_at="2024-01-01T00:00:00",
+        )
+        assert proposal_info.target_page == "test.md"
+
+        # Test ListProposalsResponse structure
+        response = rag_pb2.ListProposalsResponse(
+            success=True, error="", count=1, proposals=[proposal_info]
+        )
+        assert response.success is True
+        assert response.count == 1
+
+    def test_withdraw_proposal_rpc_structure(self):
+        """Test WithdrawProposal RPC message structure."""
+        from server.grpc import rag_pb2
+
+        # Test WithdrawProposalRequest structure
+        request = rag_pb2.WithdrawProposalRequest(
+            proposal_path="_Proposals/test.md.proposal"
+        )
+        assert request.proposal_path.endswith(".proposal")
+
+        # Test WithdrawProposalResponse structure
+        response = rag_pb2.WithdrawProposalResponse(
+            success=True, error="", message="Proposal withdrawn"
+        )
         assert response.success is True
 
     def test_grpc_servicer_can_be_instantiated(self, temp_db_path, temp_space_path):
@@ -115,7 +181,10 @@ class TestGRPCServer:
         assert servicer is not None
         assert hasattr(servicer, "Query")
         assert hasattr(servicer, "Search")
-        assert hasattr(servicer, "UpdatePage")
+        assert hasattr(servicer, "ReadPage")
+        assert hasattr(servicer, "ProposeChange")
+        assert hasattr(servicer, "ListProposals")
+        assert hasattr(servicer, "WithdrawProposal")
 
     @pytest.mark.asyncio
     async def test_grpc_server_starts(self):

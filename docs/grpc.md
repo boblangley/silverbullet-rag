@@ -16,7 +16,10 @@ The Silverbullet RAG gRPC server provides fast, binary-protocol access to search
 | `Search` | `SearchRequest` | `SearchResponse` | BM25 keyword search |
 | `SemanticSearch` | `SemanticSearchRequest` | `SemanticSearchResponse` | Vector similarity search |
 | `HybridSearch` | `HybridSearchRequest` | `HybridSearchResponse` | Combined keyword + semantic |
-| `UpdatePage` | `UpdatePageRequest` | `UpdatePageResponse` | Create/update pages |
+| `ReadPage` | `ReadPageRequest` | `ReadPageResponse` | Read a page from the space |
+| `ProposeChange` | `ProposeChangeRequest` | `ProposeChangeResponse` | Propose a change (creates a proposal for user review) |
+| `ListProposals` | `ListProposalsRequest` | `ListProposalsResponse` | List proposals by status |
+| `WithdrawProposal` | `WithdrawProposalRequest` | `WithdrawProposalResponse` | Withdraw a pending proposal |
 
 ## Proto Definition
 
@@ -29,7 +32,10 @@ service RAGService {
   rpc Search(SearchRequest) returns (SearchResponse);
   rpc SemanticSearch(SemanticSearchRequest) returns (SemanticSearchResponse);
   rpc HybridSearch(HybridSearchRequest) returns (HybridSearchResponse);
-  rpc UpdatePage(UpdatePageRequest) returns (UpdatePageResponse);
+  rpc ReadPage(ReadPageRequest) returns (ReadPageResponse);
+  rpc ProposeChange(ProposeChangeRequest) returns (ProposeChangeResponse);
+  rpc ListProposals(ListProposalsRequest) returns (ListProposalsResponse);
+  rpc WithdrawProposal(WithdrawProposalRequest) returns (WithdrawProposalResponse);
 }
 
 message SemanticSearchRequest {
@@ -47,6 +53,21 @@ message HybridSearchRequest {
   string fusion_method = 5;  // "rrf" or "weighted"
   float semantic_weight = 6;
   float keyword_weight = 7;
+}
+
+message ProposeChangeRequest {
+  string target_page = 1;
+  string content = 2;
+  string title = 3;
+  string description = 4;
+}
+
+message ProposeChangeResponse {
+  bool success = 1;
+  string error = 2;
+  string proposal_path = 3;
+  bool is_new_page = 4;
+  string message = 5;
 }
 ```
 

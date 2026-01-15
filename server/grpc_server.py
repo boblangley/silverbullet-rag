@@ -4,6 +4,8 @@ import asyncio
 import json
 import logging
 from concurrent import futures
+from pathlib import Path
+
 import grpc
 
 # Import generated proto files
@@ -12,17 +14,27 @@ from .grpc import rag_pb2, rag_pb2_grpc
 from .db import GraphDB
 from .parser import SpaceParser
 from .search import HybridSearch
+from .proposals import (
+    library_installed,
+    get_proposal_path,
+    page_exists,
+    find_proposals,
+    create_proposal_content,
+    get_proposals_config,
+)
 
 
 class RAGServiceServicer(rag_pb2_grpc.RAGServiceServicer):
     """gRPC service implementation."""
 
     def __init__(self, db_path="/db", space_path="/space", read_only=True):
+        self.db_path = Path(db_path)
         self.graph_db = GraphDB(db_path, read_only=read_only)
         self.parser = SpaceParser()
         self.hybrid_search = HybridSearch(self.graph_db)
-        self.space_path = space_path
+        self.space_path = Path(space_path)
         self.read_only = read_only
+        self.proposals_enabled = library_installed(self.space_path)
 
     def Query(self, request, context):
         """Execute a Cypher query."""
@@ -109,28 +121,178 @@ class RAGServiceServicer(rag_pb2_grpc.RAGServiceServicer):
                 results_json="", success=False, error=str(e)
             )
 
-    def UpdatePage(self, request, context):
-        """Update a page and reindex."""
+    def ReadPage(self, request, context):
+        """Read a page from the space."""
         try:
-            from pathlib import Path
+            page_path = self.space_path / request.page_name
 
-            space_dir = Path(self.space_path)
-            page_path = space_dir / request.page_name
+            # Security check - prevent path traversal
+            if not page_path.resolve().is_relative_to(self.space_path.resolve()):
+                return rag_pb2.ReadPageResponse(
+                    success=False, error="Invalid page name", content=""
+                )
 
-            # Security check
-            if not page_path.resolve().is_relative_to(space_dir.resolve()):
-                raise ValueError("Invalid page name")
+            if not page_path.exists():
+                return rag_pb2.ReadPageResponse(
+                    success=False,
+                    error=f"Page '{request.page_name}' not found",
+                    content="",
+                )
 
-            page_path.write_text(request.content)
-
-            # Re-index
-            chunks = self.parser.parse_space(str(space_dir))
-            self.graph_db.index_chunks(chunks)
-
-            return rag_pb2.UpdatePageResponse(success=True, error="")
+            content = page_path.read_text(encoding="utf-8")
+            return rag_pb2.ReadPageResponse(success=True, error="", content=content)
         except Exception as e:
-            logging.error(f"UpdatePage error: {e}")
-            return rag_pb2.UpdatePageResponse(success=False, error=str(e))
+            logging.error(f"ReadPage error: {e}")
+            return rag_pb2.ReadPageResponse(success=False, error=str(e), content="")
+
+    def ProposeChange(self, request, context):
+        """Propose a change to a page (creates a proposal for user review)."""
+        if not self.proposals_enabled:
+            return rag_pb2.ProposeChangeResponse(
+                success=False,
+                error="AI-Proposals library not installed",
+                proposal_path="",
+                is_new_page=False,
+                message="Install the AI-Proposals library from Library Manager",
+            )
+
+        try:
+            # Security check - prevent path traversal
+            target_path = self.space_path / request.target_page
+            if not target_path.resolve().is_relative_to(self.space_path.resolve()):
+                return rag_pb2.ProposeChangeResponse(
+                    success=False,
+                    error=f"Invalid page name: {request.target_page}",
+                    proposal_path="",
+                    is_new_page=False,
+                    message="",
+                )
+
+            # Get config for path prefix
+            proposals_config = get_proposals_config(self.db_path)
+            prefix = proposals_config.get("path_prefix", "_Proposals/")
+
+            is_new_page = not page_exists(self.space_path, request.target_page)
+            proposal_path = get_proposal_path(request.target_page, prefix)
+
+            proposal_content = create_proposal_content(
+                target_page=request.target_page,
+                content=request.content,
+                title=request.title,
+                description=request.description,
+                is_new_page=is_new_page,
+            )
+
+            # Write proposal file
+            full_path = self.space_path / proposal_path
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            full_path.write_text(proposal_content, encoding="utf-8")
+
+            logging.info(f"Created proposal: {proposal_path}")
+
+            return rag_pb2.ProposeChangeResponse(
+                success=True,
+                error="",
+                proposal_path=proposal_path,
+                is_new_page=is_new_page,
+                message=f"Proposal created. User can review at {proposal_path}",
+            )
+        except Exception as e:
+            logging.error(f"ProposeChange error: {e}")
+            return rag_pb2.ProposeChangeResponse(
+                success=False,
+                error=str(e),
+                proposal_path="",
+                is_new_page=False,
+                message="",
+            )
+
+    def ListProposals(self, request, context):
+        """List change proposals by status."""
+        if not self.proposals_enabled:
+            return rag_pb2.ListProposalsResponse(
+                success=False,
+                error="AI-Proposals library not installed",
+                count=0,
+                proposals=[],
+            )
+
+        try:
+            proposals_config = get_proposals_config(self.db_path)
+            prefix = proposals_config.get("path_prefix", "_Proposals/")
+
+            status = request.status if request.status else "pending"
+            proposals = find_proposals(self.space_path, prefix, status)
+
+            # Convert to proto messages
+            proto_proposals = []
+            for p in proposals:
+                proto_proposals.append(
+                    rag_pb2.ProposalInfo(
+                        path=p.get("path", ""),
+                        target_page=p.get("target_page", ""),
+                        title=p.get("title", ""),
+                        description=p.get("description", ""),
+                        status=p.get("status", ""),
+                        is_new_page=p.get("is_new_page", False),
+                        proposed_by=p.get("proposed_by", ""),
+                        created_at=p.get("created_at", ""),
+                    )
+                )
+
+            return rag_pb2.ListProposalsResponse(
+                success=True,
+                error="",
+                count=len(proto_proposals),
+                proposals=proto_proposals,
+            )
+        except Exception as e:
+            logging.error(f"ListProposals error: {e}")
+            return rag_pb2.ListProposalsResponse(
+                success=False, error=str(e), count=0, proposals=[]
+            )
+
+    def WithdrawProposal(self, request, context):
+        """Withdraw a pending proposal."""
+        if not self.proposals_enabled:
+            return rag_pb2.WithdrawProposalResponse(
+                success=False,
+                error="AI-Proposals library not installed",
+                message="",
+            )
+
+        try:
+            full_path = self.space_path / request.proposal_path
+
+            # Security check - prevent path traversal
+            if not full_path.resolve().is_relative_to(self.space_path.resolve()):
+                return rag_pb2.WithdrawProposalResponse(
+                    success=False,
+                    error=f"Invalid proposal path: {request.proposal_path}",
+                    message="",
+                )
+
+            if not full_path.exists():
+                return rag_pb2.WithdrawProposalResponse(
+                    success=False, error="Proposal not found", message=""
+                )
+
+            if not request.proposal_path.endswith(".proposal"):
+                return rag_pb2.WithdrawProposalResponse(
+                    success=False, error="Not a proposal file", message=""
+                )
+
+            full_path.unlink()
+            logging.info(f"Withdrew proposal: {request.proposal_path}")
+
+            return rag_pb2.WithdrawProposalResponse(
+                success=True, error="", message="Proposal withdrawn"
+            )
+        except Exception as e:
+            logging.error(f"WithdrawProposal error: {e}")
+            return rag_pb2.WithdrawProposalResponse(
+                success=False, error=str(e), message=""
+            )
 
 
 async def serve(db_path="/db", space_path="/space"):
