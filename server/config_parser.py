@@ -4,6 +4,8 @@ Parse CONFIG.md and extract config.set() values from space-lua blocks.
 This module parses Silverbullet's CONFIG.md file which contains space-lua
 code blocks with config.set() calls. The parsed configuration is written
 to space_config.json for the MCP server to read.
+
+Uses luaparser for proper AST-based parsing instead of brittle regex.
 """
 
 import json
@@ -12,12 +14,68 @@ import re
 from pathlib import Path
 from typing import Any, Dict
 
-from slpp import slpp as lua
+from luaparser import ast
+from luaparser import astnodes
 
 logger = logging.getLogger(__name__)
 
 
-def set_nested(d: Dict[str, Any], key: str, value: Any) -> None:
+def _lua_value_to_python(node: astnodes.Node) -> Any:
+    """Convert a Lua AST value node to Python equivalent.
+
+    Args:
+        node: A luaparser AST node representing a Lua value
+
+    Returns:
+        Python equivalent (str, int, float, bool, None, or dict)
+    """
+    if isinstance(node, astnodes.String):
+        return node.s.decode() if isinstance(node.s, bytes) else node.s
+    elif isinstance(node, astnodes.Number):
+        return node.n
+    elif isinstance(node, astnodes.TrueExpr):
+        return True
+    elif isinstance(node, astnodes.FalseExpr):
+        return False
+    elif isinstance(node, astnodes.Nil):
+        return None
+    elif isinstance(node, astnodes.Table):
+        return _lua_table_to_dict(node)
+    else:
+        logger.warning(f"Unknown Lua node type: {type(node).__name__}")
+        return None
+
+
+def _lua_table_to_dict(table_node: astnodes.Table) -> Dict[str, Any]:
+    """Convert a Lua Table AST node to Python dict.
+
+    Args:
+        table_node: A luaparser Table node
+
+    Returns:
+        Python dictionary with string keys
+    """
+    result: Dict[str, Any] = {}
+    for field in table_node.fields:
+        if isinstance(field, astnodes.Field):
+            # Get key - could be Name or String
+            if isinstance(field.key, astnodes.Name):
+                key = field.key.id
+            elif isinstance(field.key, astnodes.String):
+                key = (
+                    field.key.s.decode()
+                    if isinstance(field.key.s, bytes)
+                    else field.key.s
+                )
+            else:
+                continue  # Skip non-string keys
+
+            value = _lua_value_to_python(field.value)
+            result[key] = value
+    return result
+
+
+def _set_nested(d: Dict[str, Any], key: str, value: Any) -> None:
     """Set a value in a nested dict using dot-notation key.
 
     Args:
@@ -50,51 +108,63 @@ def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any
     return result
 
 
-def _extract_balanced_braces(text: str) -> str | None:
-    """Extract a balanced brace expression from text starting with '{'.
+def _parse_lua_config(lua_code: str) -> Dict[str, Any]:
+    """Parse Lua code and extract all config.set() calls.
+
+    Uses luaparser AST to find config.set() calls with any syntax:
+    - config.set("key", value)
+    - config.set { key = value }
 
     Args:
-        text: Text starting with '{'
+        lua_code: Raw Lua code from a space-lua block
 
     Returns:
-        The balanced brace expression including outer braces, or None if invalid
+        Parsed configuration dictionary
     """
-    if not text or text[0] != "{":
-        return None
+    config: Dict[str, Any] = {}
 
-    depth = 0
-    in_string = False
-    string_char = None
+    try:
+        tree = ast.parse(lua_code)
+    except Exception as e:
+        logger.warning(f"Failed to parse Lua code: {e}")
+        return config
 
-    for i, char in enumerate(text):
-        # Handle string literals
-        if char in ('"', "'") and (i == 0 or text[i - 1] != "\\"):
-            if not in_string:
-                in_string = True
-                string_char = char
-            elif char == string_char:
-                in_string = False
-                string_char = None
+    for node in ast.walk(tree):
+        if not isinstance(node, astnodes.Call):
             continue
 
-        if in_string:
+        # Check if this is config.set(...)
+        func = node.func
+        if not isinstance(func, astnodes.Index):
+            continue
+        if not isinstance(func.value, astnodes.Name) or func.value.id != "config":
+            continue
+        if not isinstance(func.idx, astnodes.Name) or func.idx.id != "set":
             continue
 
-        if char == "{":
-            depth += 1
-        elif char == "}":
-            depth -= 1
-            if depth == 0:
-                return text[: i + 1]
+        args = node.args
 
-    return None  # Unbalanced braces
+        # Pattern 1: config.set("key", value)
+        if len(args) == 2 and isinstance(args[0], astnodes.String):
+            key = args[0].s.decode() if isinstance(args[0].s, bytes) else args[0].s
+            value = _lua_value_to_python(args[1])
+            _set_nested(config, key, value)
+            logger.debug(f"Parsed config.set({key!r}, {value!r})")
+
+        # Pattern 2: config.set { table }
+        elif len(args) == 1 and isinstance(args[0], astnodes.Table):
+            table_dict = _lua_table_to_dict(args[0])
+            config = _deep_merge(config, table_dict)
+            logger.debug(f"Parsed config.set table: {table_dict}")
+
+    return config
 
 
 def parse_config_page(content: str) -> Dict[str, Any]:
     """Parse CONFIG.md and extract config.set() values.
 
     Extracts space-lua code blocks from the markdown content and parses
-    config.set() calls using the slpp Lua parser. Supports both syntaxes:
+    config.set() calls using proper AST parsing. Supports all syntaxes:
 
     1. config.set("key", value) - dot-notation key with value
     2. config.set { key = value } - Lua table syntax
@@ -122,53 +192,22 @@ def parse_config_page(content: str) -> Dict[str, Any]:
     config: Dict[str, Any] = {}
 
     for block in lua_blocks:
-        # Pattern 1: config.set("key", value) - dot-notation syntax
-        # Value can be: string, number, boolean, or table
-        # The lookahead ensures we stop at the next config.set, comment, end of block, or newline
-        pattern_dotnotation = (
-            r'config\.set\s*\(\s*"([^"]+)"\s*,\s*(.+?)\s*\)(?=\s*(?:config\.|--|$|\n))'
-        )
-        matches = re.findall(pattern_dotnotation, block, re.MULTILINE)
-
-        for key, value_str in matches:
-            try:
-                # Use slpp to parse Lua literals
-                parsed = lua.decode(value_str)
-                set_nested(config, key, parsed)
-                logger.debug(f"Parsed config (dot-notation): {key} = {parsed}")
-            except Exception as e:
-                # Fall back to simple parsing for edge cases
-                value_str = value_str.strip()
-                if value_str in ("true", "false"):
-                    set_nested(config, key, value_str == "true")
-                elif value_str.replace(".", "").replace("-", "").lstrip("-").isdigit():
-                    set_nested(
-                        config,
-                        key,
-                        float(value_str) if "." in value_str else int(value_str),
-                    )
-                elif value_str.startswith('"') and value_str.endswith('"'):
-                    set_nested(config, key, value_str[1:-1])
-                else:
-                    logger.warning(f"Could not parse config value for {key}: {e}")
-
-        # Pattern 2: config.set { ... } - Lua table syntax
-        # Find config.set followed by opening brace, then extract balanced braces
-        table_start_pattern = r"config\.set\s*\{"
-        for match in re.finditer(table_start_pattern, block):
-            # Position of opening { in the block
-            brace_pos = match.end() - 1
-            table_str = _extract_balanced_braces(block[brace_pos:])
-            if table_str:
-                try:
-                    parsed = lua.decode(table_str)
-                    if isinstance(parsed, dict):
-                        config = _deep_merge(config, parsed)
-                        logger.debug(f"Parsed config (table): {parsed}")
-                except Exception as e:
-                    logger.warning(f"Could not parse config table: {e}")
+        block_config = _parse_lua_config(block)
+        config = _deep_merge(config, block_config)
 
     return config
+
+
+# Keep these as public API for backward compatibility
+def set_nested(d: Dict[str, Any], key: str, value: Any) -> None:
+    """Set a value in a nested dict using dot-notation key.
+
+    Args:
+        d: Dictionary to modify
+        key: Dot-notation key (e.g., "mcp.proposals.path_prefix")
+        value: Value to set
+    """
+    _set_nested(d, key, value)
 
 
 def write_config_json(config: Dict[str, Any], db_path: Path) -> None:
