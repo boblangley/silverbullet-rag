@@ -33,6 +33,34 @@ class SpaceWatcher(FileSystemEventHandler):
         self.currently_processing = set()
         self.file_hashes = {}  # Track content hashes to avoid unnecessary reindexing
 
+    def _should_skip_file(self, path: str) -> bool:
+        """Check if a file should be skipped during indexing.
+
+        Skips:
+        - .proposal files (change proposals awaiting review)
+        - Files in _Proposals/ directory (proposal-related content)
+        - Any file ending in .rejected.md
+
+        Args:
+            path: Path string to check
+
+        Returns:
+            True if file should be skipped
+        """
+        # Skip .proposal files
+        if path.endswith(".proposal"):
+            return True
+
+        # Skip .rejected.md files
+        if path.endswith(".rejected.md"):
+            return True
+
+        # Skip files in _Proposals directory
+        if "/_Proposals/" in path or path.startswith("_Proposals/"):
+            return True
+
+        return False
+
     def _compute_file_hash(self, path: str) -> str | None:
         """Compute MD5 hash of file contents.
 
@@ -123,6 +151,10 @@ class SpaceWatcher(FileSystemEventHandler):
         if event.is_directory or not event.src_path.endswith(".md"):
             return
 
+        # Skip proposal-related files
+        if self._should_skip_file(event.src_path):
+            return
+
         if not self._should_process(event.src_path):
             return
 
@@ -132,6 +164,10 @@ class SpaceWatcher(FileSystemEventHandler):
     def on_created(self, event):
         """Handle file creation."""
         if event.is_directory or not event.src_path.endswith(".md"):
+            return
+
+        # Skip proposal-related files
+        if self._should_skip_file(event.src_path):
             return
 
         if not self._should_process(event.src_path):

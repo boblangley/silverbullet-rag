@@ -79,6 +79,36 @@ class SpaceParser:
         self._frontmatter_cache: Dict[str, Dict[str, Any]] = {}
         self._content_cache: Dict[str, str] = {}
 
+    def _should_skip_file(self, file_path: Path) -> bool:
+        """Check if a file should be skipped during indexing.
+
+        Skips:
+        - .proposal files (change proposals awaiting review)
+        - Files in _Proposals/ directory (proposal-related content)
+        - Any file ending in .rejected.md
+
+        Args:
+            file_path: Path to check
+
+        Returns:
+            True if file should be skipped
+        """
+        # Skip .proposal files entirely
+        if file_path.suffix == ".proposal":
+            return True
+
+        # Skip .rejected.md files
+        if file_path.name.endswith(".rejected.md"):
+            return True
+
+        # Skip files in _Proposals directory (these are proposal-related)
+        # They should not be indexed as regular content
+        parts = file_path.parts
+        if "_Proposals" in parts:
+            return True
+
+        return False
+
     def parse_space(
         self, dir_path: str, expand_transclusions: bool = True
     ) -> List[Chunk]:
@@ -97,6 +127,9 @@ class SpaceParser:
 
         # First pass: cache all file contents for transclusion resolution
         for md_file in space_path.glob("**/*.md"):
+            # Skip proposal-related files from caching (they shouldn't be transcluded)
+            if self._should_skip_file(md_file):
+                continue
             try:
                 with open(md_file, "r", encoding="utf-8") as f:
                     content = f.read()
@@ -112,6 +145,9 @@ class SpaceParser:
 
         # Second pass: parse files with transclusion expansion
         for md_file in space_path.glob("**/*.md"):
+            # Skip proposal-related files
+            if self._should_skip_file(md_file):
+                continue
             try:
                 content = self._content_cache.get(
                     str(md_file.relative_to(space_path).with_suffix("")), ""
@@ -166,6 +202,10 @@ class SpaceParser:
             return []
 
         if not file_path.suffix == ".md":
+            return []
+
+        # Skip proposal-related files
+        if self._should_skip_file(file_path):
             return []
 
         try:

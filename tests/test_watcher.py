@@ -533,6 +533,89 @@ class TestFileEventHandling:
             mock_delete.assert_not_called()
 
 
+class TestProposalFileSkipping:
+    """Tests for skipping .proposal and rejected files during indexing."""
+
+    def test_should_skip_proposal_files(self, temp_space_path, temp_db_path):
+        """Test that .proposal files are skipped."""
+        from server.db.graph import GraphDB
+
+        watcher = SpaceWatcher(
+            temp_space_path, graph_db=GraphDB(temp_db_path), db_path=temp_db_path
+        )
+
+        assert watcher._should_skip_file("/space/test.proposal") is True
+        assert watcher._should_skip_file("/space/_Proposals/foo.proposal") is True
+
+    def test_should_skip_rejected_files(self, temp_space_path, temp_db_path):
+        """Test that .rejected.md files are skipped."""
+        from server.db.graph import GraphDB
+
+        watcher = SpaceWatcher(
+            temp_space_path, graph_db=GraphDB(temp_db_path), db_path=temp_db_path
+        )
+
+        assert watcher._should_skip_file("/space/test.rejected.md") is True
+        assert watcher._should_skip_file("/space/foo/bar.rejected.md") is True
+
+    def test_should_skip_proposals_directory(self, temp_space_path, temp_db_path):
+        """Test that files in _Proposals directory are skipped."""
+        from server.db.graph import GraphDB
+
+        watcher = SpaceWatcher(
+            temp_space_path, graph_db=GraphDB(temp_db_path), db_path=temp_db_path
+        )
+
+        assert watcher._should_skip_file("/space/_Proposals/test.md") is True
+        assert watcher._should_skip_file("/space/_Proposals/subdir/test.md") is True
+
+    def test_should_not_skip_regular_files(self, temp_space_path, temp_db_path):
+        """Test that regular markdown files are not skipped."""
+        from server.db.graph import GraphDB
+
+        watcher = SpaceWatcher(
+            temp_space_path, graph_db=GraphDB(temp_db_path), db_path=temp_db_path
+        )
+
+        assert watcher._should_skip_file("/space/test.md") is False
+        assert watcher._should_skip_file("/space/Projects/notes.md") is False
+        assert (
+            watcher._should_skip_file("/space/Proposals/legit.md") is False
+        )  # No underscore
+
+    def test_on_modified_skips_proposal_files(self, temp_space_path, temp_db_path):
+        """Test that on_modified skips proposal files."""
+        from server.db.graph import GraphDB
+
+        watcher = SpaceWatcher(
+            temp_space_path, graph_db=GraphDB(temp_db_path), db_path=temp_db_path
+        )
+
+        event = MagicMock()
+        event.is_directory = False
+        event.src_path = str(Path(temp_space_path) / "_Proposals" / "test.md")
+
+        with patch.object(watcher, "_reindex_file") as mock_reindex:
+            watcher.on_modified(event)
+            mock_reindex.assert_not_called()
+
+    def test_on_created_skips_proposal_files(self, temp_space_path, temp_db_path):
+        """Test that on_created skips proposal files."""
+        from server.db.graph import GraphDB
+
+        watcher = SpaceWatcher(
+            temp_space_path, graph_db=GraphDB(temp_db_path), db_path=temp_db_path
+        )
+
+        event = MagicMock()
+        event.is_directory = False
+        event.src_path = str(Path(temp_space_path) / "_Proposals" / "new.md")
+
+        with patch.object(watcher, "_reindex_file") as mock_reindex:
+            watcher.on_created(event)
+            mock_reindex.assert_not_called()
+
+
 class TestBackwardCompatibility:
     """Tests for backward compatibility aliases."""
 
