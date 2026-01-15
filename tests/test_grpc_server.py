@@ -243,7 +243,7 @@ class TestGRPCServer:
             temp_db_path: Temporary database directory
             temp_space_path: Temporary space directory
         """
-        from server.grpc_server import RAGServiceServicer
+        from server.grpc.server import RAGServiceServicer
 
         # Use read_only=False for test since we're creating a fresh database
         servicer = RAGServiceServicer(temp_db_path, temp_space_path, read_only=False)
@@ -263,7 +263,7 @@ class TestGRPCServer:
 
         This should FAIL because service registration is commented out.
         """
-        from server.grpc_server import serve
+        from server.grpc.server import serve
 
         # This test just checks that the server setup doesn't crash
         # We don't actually run it to completion (would block)
@@ -351,7 +351,7 @@ class TestGetProjectContextUnit:
     @pytest.fixture
     def servicer_with_project(self, temp_db_path, temp_space_path):
         """Create a servicer with a test project page."""
-        from server.grpc_server import RAGServiceServicer
+        from server.grpc.server import RAGServiceServicer
         from pathlib import Path
 
         space = Path(temp_space_path)

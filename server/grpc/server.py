@@ -9,12 +9,12 @@ from pathlib import Path
 import grpc
 
 # Import generated proto files
-from .grpc import rag_pb2, rag_pb2_grpc
+from . import rag_pb2, rag_pb2_grpc
 
-from .db import GraphDB
-from .parser import SpaceParser
-from .search import HybridSearch
-from .proposals import (
+from ..db import GraphDB
+from ..parser import SpaceParser
+from ..search import HybridSearch
+from ..proposals import (
     library_installed,
     get_proposal_path,
     page_exists,

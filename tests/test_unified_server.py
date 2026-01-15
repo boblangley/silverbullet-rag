@@ -113,7 +113,7 @@ This is test content for the unified server.
     def test_grpc_servicer_creation(self, server_env):
         """Test that gRPC servicer is created with correct attributes."""
         from server.__main__ import UnifiedServer
-        from server.grpc_server import RAGServiceServicer
+        from server.grpc.server import RAGServiceServicer
 
         server = UnifiedServer(
             db_path=server_env["db_path"],

@@ -23,7 +23,7 @@ from watchdog.observers import Observer
 
 from .db import GraphDB
 from .grpc import rag_pb2_grpc
-from .grpc_server import RAGServiceServicer
+from .grpc.server import RAGServiceServicer
 from .mcp import dependencies as mcp_deps
 from .mcp.server import create_mcp_server
 from .parser import SpaceParser

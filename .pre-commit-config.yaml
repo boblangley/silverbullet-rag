@@ -16,12 +16,6 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
 
-  - repo: local
-    hooks:
-      - id: check-tag-format
-        name: check tag format (no 'v' prefix)
-        entry: scripts/check-tag-format.sh
-        language: script
-        stages: [pre-push]
-        always_run: true
-        pass_filenames: false
+# Note: Tag format checking is done via a native git hook (.git/hooks/pre-push)
+# because pre-commit doesn't forward stdin to local scripts, which git uses
+# to pass tag refs. See scripts/check-tag-format.sh for the hook implementation.
