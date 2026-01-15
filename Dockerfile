@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY server/ ./server/
 
 # Create directories for database and space
-RUN mkdir -p /data/ladybug /space
+RUN mkdir -p /data /space
 
 # Expose ports
 # 8000: MCP Streamable HTTP transport
