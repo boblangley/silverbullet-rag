@@ -137,6 +137,14 @@ class GraphDB:
             conn.execute(
                 "CREATE REL TABLE IF NOT EXISTS IN_FOLDER(FROM Chunk TO Folder)"
             )
+            # Page-to-Chunk relationship (page contains these chunks in order)
+            conn.execute(
+                "CREATE REL TABLE IF NOT EXISTS HAS_CHUNK(FROM Page TO Chunk, chunk_order INT64)"
+            )
+            # Page-to-Page links (derived from chunk links for easier traversal)
+            conn.execute(
+                "CREATE REL TABLE IF NOT EXISTS PAGE_LINKS_TO(FROM Page TO Page)"
+            )
             # New relationships for transclusions, attributes, and data blocks
             conn.execute(
                 "CREATE REL TABLE IF NOT EXISTS EMBEDS(FROM Chunk TO Page, header STRING)"
@@ -189,151 +197,226 @@ class GraphDB:
             embeddings = self.embedding_service.generate_embeddings_batch(contents)
             logger.info(f"Generated {len(embeddings)} embeddings")
 
+        # Group chunks by source file to create Page nodes and HAS_CHUNK relationships
+        chunks_by_file: Dict[
+            str, List[tuple]
+        ] = {}  # file_path -> [(order, chunk, embedding)]
         for i, chunk in enumerate(chunks):
-            # Create chunk node
-            chunk_id = f"{chunk.file_path}#{chunk.header}"
-
-            # Serialize frontmatter to JSON string (with date handling)
-            frontmatter_json = (
-                json.dumps(chunk.frontmatter, cls=DateTimeEncoder)
-                if chunk.frontmatter
-                else "{}"
+            file_path = chunk.file_path
+            if file_path not in chunks_by_file:
+                chunks_by_file[file_path] = []
+            embedding = embeddings[i] if embeddings else None
+            chunks_by_file[file_path].append(
+                (len(chunks_by_file[file_path]), chunk, embedding)
             )
 
-            # Build query based on whether embeddings are enabled
-            if self.enable_embeddings and embeddings:
-                query = """
-                MERGE (c:Chunk {id: $id})
-                SET c.file_path = $file_path,
-                    c.header = $header,
-                    c.content = $content,
-                    c.frontmatter = $frontmatter,
-                    c.embedding = $embedding
-                """
-                params = {
-                    "id": chunk_id,
-                    "file_path": chunk.file_path,
-                    "header": chunk.header,
-                    "content": chunk.content,
-                    "frontmatter": frontmatter_json,
-                    "embedding": embeddings[i],
-                }
+        # Helper to convert file_path to page name
+        def file_path_to_page_name(fp: str) -> str:
+            """Convert absolute file path to page name.
+
+            Tries to find a /space/ prefix first, otherwise uses just the filename.
+            """
+            # Try to find /space/ in the path and use everything after it
+            if "/space/" in fp:
+                fp = fp.split("/space/", 1)[1]
             else:
-                query = """
-                MERGE (c:Chunk {id: $id})
-                SET c.file_path = $file_path,
-                    c.header = $header,
-                    c.content = $content,
-                    c.frontmatter = $frontmatter
-                """
-                params = {
-                    "id": chunk_id,
-                    "file_path": chunk.file_path,
-                    "header": chunk.header,
-                    "content": chunk.content,
-                    "frontmatter": frontmatter_json,
-                }
+                # Fallback: use just the filename without extension
+                from pathlib import Path as P
 
-            conn.execute(query, params)
+                fp = P(fp).stem
+                return fp
+            # Remove .md suffix
+            if fp.endswith(".md"):
+                fp = fp[:-3]
+            return fp
 
-            # Create edges for wikilinks
-            for link in chunk.links:
-                link_query = """
-                MATCH (c:Chunk {id: $chunk_id})
-                MERGE (t:Page {name: $link_name})
-                MERGE (c)-[:LINKS_TO]->(t)
-                """
-                conn.execute(link_query, {"chunk_id": chunk_id, "link_name": link})
+        # Create Page nodes for source files and track links for PAGE_LINKS_TO
+        page_links: Dict[str, set] = {}  # source_page -> {target_pages}
+        for file_path in chunks_by_file:
+            page_name = file_path_to_page_name(file_path)
 
-            # Create edges for tags
-            for tag in chunk.tags:
-                tag_query = """
-                MATCH (c:Chunk {id: $chunk_id})
-                MERGE (t:Tag {name: $tag_name})
-                MERGE (c)-[:TAGGED]->(t)
-                """
-                conn.execute(tag_query, {"chunk_id": chunk_id, "tag_name": tag})
+            # Create/update Page node for the source file
+            page_query = """
+            MERGE (p:Page {name: $name})
+            """
+            conn.execute(page_query, {"name": page_name})
+            page_links[page_name] = set()
 
-            # Create folder relationship if chunk has folder_path
-            if hasattr(chunk, "folder_path") and chunk.folder_path:
-                folder_query = """
-                MATCH (c:Chunk {id: $chunk_id})
-                MATCH (f:Folder {path: $folder_path})
-                MERGE (c)-[:IN_FOLDER]->(f)
-                """
-                conn.execute(
-                    folder_query,
-                    {"chunk_id": chunk_id, "folder_path": chunk.folder_path},
+        for file_path, chunk_data in chunks_by_file.items():
+            page_name = file_path_to_page_name(file_path)
+
+            for order, chunk, embedding in chunk_data:
+                # Create chunk node
+                chunk_id = f"{chunk.file_path}#{chunk.header}"
+
+                # Serialize frontmatter to JSON string (with date handling)
+                frontmatter_json = (
+                    json.dumps(chunk.frontmatter, cls=DateTimeEncoder)
+                    if chunk.frontmatter
+                    else "{}"
                 )
 
-            # Create edges for transclusions (EMBEDS relationship)
-            if hasattr(chunk, "transclusions") and chunk.transclusions:
-                for transclusion in chunk.transclusions:
-                    embed_query = """
-                    MATCH (c:Chunk {id: $chunk_id})
-                    MERGE (p:Page {name: $target_page})
-                    MERGE (c)-[:EMBEDS {header: $header}]->(p)
+                # Build query based on whether embeddings are enabled
+                if self.enable_embeddings and embedding:
+                    query = """
+                    MERGE (c:Chunk {id: $id})
+                    SET c.file_path = $file_path,
+                        c.header = $header,
+                        c.content = $content,
+                        c.frontmatter = $frontmatter,
+                        c.embedding = $embedding
                     """
-                    conn.execute(
-                        embed_query,
-                        {
-                            "chunk_id": chunk_id,
-                            "target_page": transclusion.target_page,
-                            "header": transclusion.target_header or "",
-                        },
-                    )
+                    params = {
+                        "id": chunk_id,
+                        "file_path": chunk.file_path,
+                        "header": chunk.header,
+                        "content": chunk.content,
+                        "frontmatter": frontmatter_json,
+                        "embedding": embedding,
+                    }
+                else:
+                    query = """
+                    MERGE (c:Chunk {id: $id})
+                    SET c.file_path = $file_path,
+                        c.header = $header,
+                        c.content = $content,
+                        c.frontmatter = $frontmatter
+                    """
+                    params = {
+                        "id": chunk_id,
+                        "file_path": chunk.file_path,
+                        "header": chunk.header,
+                        "content": chunk.content,
+                        "frontmatter": frontmatter_json,
+                    }
 
-            # Create nodes and edges for inline attributes
-            if hasattr(chunk, "inline_attributes") and chunk.inline_attributes:
-                for attr in chunk.inline_attributes:
-                    attr_id = f"{chunk_id}#{attr.name}"
-                    attr_query = """
-                    MATCH (c:Chunk {id: $chunk_id})
-                    MERGE (a:Attribute {id: $attr_id})
-                    SET a.name = $name, a.value = $value
-                    MERGE (c)-[:HAS_ATTRIBUTE]->(a)
-                    """
-                    conn.execute(
-                        attr_query,
-                        {
-                            "chunk_id": chunk_id,
-                            "attr_id": attr_id,
-                            "name": attr.name,
-                            "value": attr.value,
-                        },
-                    )
+                conn.execute(query, params)
 
-            # Create nodes and edges for data blocks
-            if hasattr(chunk, "data_blocks") and chunk.data_blocks:
-                for idx, data_block in enumerate(chunk.data_blocks):
-                    block_id = f"{chunk_id}#datablock#{idx}"
-                    data_json = json.dumps(data_block.data, cls=DateTimeEncoder)
-                    block_query = """
+                # Create HAS_CHUNK edge from Page to Chunk
+                # Note: LadybugDB doesn't support $param in relationship properties,
+                # so we use string interpolation for the order value (safe, it's an int)
+                has_chunk_query = f"""
+                MATCH (p:Page {{name: $page_name}})
+                MATCH (c:Chunk {{id: $chunk_id}})
+                MERGE (p)-[:HAS_CHUNK {{chunk_order: {order}}}]->(c)
+                """
+                conn.execute(
+                    has_chunk_query,
+                    {"page_name": page_name, "chunk_id": chunk_id},
+                )
+
+                # Create edges for wikilinks (Chunk -> Page)
+                for link in chunk.links:
+                    link_query = """
                     MATCH (c:Chunk {id: $chunk_id})
-                    MERGE (d:DataBlock {id: $block_id})
-                    SET d.tag = $tag, d.data = $data, d.file_path = $file_path
-                    MERGE (c)-[:HAS_DATA_BLOCK]->(d)
+                    MERGE (t:Page {name: $link_name})
+                    MERGE (c)-[:LINKS_TO]->(t)
                     """
-                    conn.execute(
-                        block_query,
-                        {
-                            "chunk_id": chunk_id,
-                            "block_id": block_id,
-                            "tag": data_block.tag,
-                            "data": data_json,
-                            "file_path": data_block.file_path,
-                        },
-                    )
-                    # Also create tag relationship for the data block
-                    data_tag_query = """
-                    MATCH (d:DataBlock {id: $block_id})
+                    conn.execute(link_query, {"chunk_id": chunk_id, "link_name": link})
+                    # Track for PAGE_LINKS_TO
+                    page_links[page_name].add(link)
+
+                # Create edges for tags
+                for tag in chunk.tags:
+                    tag_query = """
+                    MATCH (c:Chunk {id: $chunk_id})
                     MERGE (t:Tag {name: $tag_name})
-                    MERGE (d)-[:DATA_TAGGED]->(t)
+                    MERGE (c)-[:TAGGED]->(t)
+                    """
+                    conn.execute(tag_query, {"chunk_id": chunk_id, "tag_name": tag})
+
+                # Create folder relationship if chunk has folder_path
+                if hasattr(chunk, "folder_path") and chunk.folder_path:
+                    folder_query = """
+                    MATCH (c:Chunk {id: $chunk_id})
+                    MATCH (f:Folder {path: $folder_path})
+                    MERGE (c)-[:IN_FOLDER]->(f)
                     """
                     conn.execute(
-                        data_tag_query,
-                        {"block_id": block_id, "tag_name": data_block.tag},
+                        folder_query,
+                        {"chunk_id": chunk_id, "folder_path": chunk.folder_path},
                     )
+
+                # Create edges for transclusions (EMBEDS relationship)
+                if hasattr(chunk, "transclusions") and chunk.transclusions:
+                    for transclusion in chunk.transclusions:
+                        embed_query = """
+                        MATCH (c:Chunk {id: $chunk_id})
+                        MERGE (p:Page {name: $target_page})
+                        MERGE (c)-[:EMBEDS {header: $header}]->(p)
+                        """
+                        conn.execute(
+                            embed_query,
+                            {
+                                "chunk_id": chunk_id,
+                                "target_page": transclusion.target_page,
+                                "header": transclusion.target_header or "",
+                            },
+                        )
+
+                # Create nodes and edges for inline attributes
+                if hasattr(chunk, "inline_attributes") and chunk.inline_attributes:
+                    for attr in chunk.inline_attributes:
+                        attr_id = f"{chunk_id}#{attr.name}"
+                        attr_query = """
+                        MATCH (c:Chunk {id: $chunk_id})
+                        MERGE (a:Attribute {id: $attr_id})
+                        SET a.name = $name, a.value = $value
+                        MERGE (c)-[:HAS_ATTRIBUTE]->(a)
+                        """
+                        conn.execute(
+                            attr_query,
+                            {
+                                "chunk_id": chunk_id,
+                                "attr_id": attr_id,
+                                "name": attr.name,
+                                "value": attr.value,
+                            },
+                        )
+
+                # Create nodes and edges for data blocks
+                if hasattr(chunk, "data_blocks") and chunk.data_blocks:
+                    for idx, data_block in enumerate(chunk.data_blocks):
+                        block_id = f"{chunk_id}#datablock#{idx}"
+                        data_json = json.dumps(data_block.data, cls=DateTimeEncoder)
+                        block_query = """
+                        MATCH (c:Chunk {id: $chunk_id})
+                        MERGE (d:DataBlock {id: $block_id})
+                        SET d.tag = $tag, d.data = $data, d.file_path = $file_path
+                        MERGE (c)-[:HAS_DATA_BLOCK]->(d)
+                        """
+                        conn.execute(
+                            block_query,
+                            {
+                                "chunk_id": chunk_id,
+                                "block_id": block_id,
+                                "tag": data_block.tag,
+                                "data": data_json,
+                                "file_path": data_block.file_path,
+                            },
+                        )
+                        # Also create tag relationship for the data block
+                        data_tag_query = """
+                        MATCH (d:DataBlock {id: $block_id})
+                        MERGE (t:Tag {name: $tag_name})
+                        MERGE (d)-[:DATA_TAGGED]->(t)
+                        """
+                        conn.execute(
+                            data_tag_query,
+                            {"block_id": block_id, "tag_name": data_block.tag},
+                        )
+
+        # Create PAGE_LINKS_TO relationships (Page -> Page)
+        for source_page, target_pages in page_links.items():
+            for target_page in target_pages:
+                page_link_query = """
+                MATCH (source:Page {name: $source})
+                MATCH (target:Page {name: $target})
+                MERGE (source)-[:PAGE_LINKS_TO]->(target)
+                """
+                conn.execute(
+                    page_link_query, {"source": source_page, "target": target_page}
+                )
 
     def index_folders(
         self, folder_paths: List[str], index_pages: Optional[Dict[str, str]] = None
@@ -457,10 +540,18 @@ class GraphDB:
         """
         conn.execute(cleanup_tags_query)
 
-        # Cleanup orphaned Page nodes (pages with no incoming LINKS_TO or EMBEDS relationships)
+        # Cleanup orphaned Page nodes (pages with no incoming relationships)
+        # A Page is orphaned if it has no:
+        # - HAS_CHUNK edges (not a source file)
+        # - LINKS_TO edges from chunks
+        # - EMBEDS edges from chunks
+        # - PAGE_LINKS_TO edges from other pages
         cleanup_pages_query = """
         MATCH (p:Page)
-        WHERE NOT (p)<-[:LINKS_TO]-() AND NOT (p)<-[:EMBEDS]-()
+        WHERE NOT (p)-[:HAS_CHUNK]->()
+          AND NOT (p)<-[:LINKS_TO]-()
+          AND NOT (p)<-[:EMBEDS]-()
+          AND NOT (p)<-[:PAGE_LINKS_TO]-()
         DETACH DELETE p
         """
         conn.execute(cleanup_pages_query)
