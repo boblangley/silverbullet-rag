@@ -37,6 +37,21 @@ def get_dependencies() -> Dependencies:
     return _deps
 
 
+def refresh_proposals_status() -> None:
+    """Refresh the proposals_enabled status after library installation.
+
+    Call this after installing or updating a library to update the
+    proposals_enabled flag without restarting the server.
+    """
+    global _deps
+    if _deps is not None:
+        _deps.proposals_enabled = library_installed(_deps.space_path)
+        if _deps.proposals_enabled:
+            logger.info("Proposals library detected, proposal tools enabled")
+        else:
+            logger.info("Proposals library not detected, proposal tools disabled")
+
+
 async def initialize() -> Dependencies:
     """Initialize all dependencies."""
     global _deps
