@@ -192,6 +192,100 @@ class TestWriteAndLoadConfigJson:
         assert json.loads(config_path.read_text()) == config
 
 
+class TestTableSyntax:
+    """Tests for Lua table syntax: config.set { key = value }."""
+
+    def test_simple_table(self):
+        """Test parsing simple table syntax."""
+        content = """```space-lua
+config.set {
+  theme = "dark"
+}
+```
+"""
+        config = parse_config_page(content)
+        assert config == {"theme": "dark"}
+
+    def test_nested_table(self):
+        """Test parsing nested table syntax."""
+        content = """```space-lua
+config.set {
+  mcp = {
+    proposals = {
+      path_prefix = "_Proposals/"
+    }
+  }
+}
+```
+"""
+        config = parse_config_page(content)
+        assert config == {"mcp": {"proposals": {"path_prefix": "_Proposals/"}}}
+
+    def test_multiple_keys_in_table(self):
+        """Test parsing multiple keys in one table."""
+        content = """```space-lua
+config.set {
+  theme = "dark",
+  editor = "vim"
+}
+```
+"""
+        config = parse_config_page(content)
+        assert config == {"theme": "dark", "editor": "vim"}
+
+    def test_mixed_syntax(self):
+        """Test mixing dot-notation and table syntax."""
+        content = """```space-lua
+config.set("mcp.proposals.path_prefix", "_Proposals/")
+config.set {
+  theme = "dark"
+}
+```
+"""
+        config = parse_config_page(content)
+        assert config == {
+            "mcp": {"proposals": {"path_prefix": "_Proposals/"}},
+            "theme": "dark",
+        }
+
+    def test_table_with_boolean(self):
+        """Test parsing table with boolean values."""
+        content = """```space-lua
+config.set {
+  feature_enabled = true,
+  debug_mode = false
+}
+```
+"""
+        config = parse_config_page(content)
+        assert config == {"feature_enabled": True, "debug_mode": False}
+
+    def test_table_with_number(self):
+        """Test parsing table with numeric values."""
+        content = """```space-lua
+config.set {
+  max_items = 100,
+  threshold = 0.5
+}
+```
+"""
+        config = parse_config_page(content)
+        assert config == {"max_items": 100, "threshold": 0.5}
+
+    def test_real_silverbullet_default_config(self):
+        """Test parsing real Silverbullet default CONFIG.md style."""
+        content = """This is where you configure SilverBullet to your liking. See [[^Library/Std/Config]] for a full list of configuration options.
+
+```space-lua
+config.set {
+  theme = "dark"
+}
+```
+"""
+        config = parse_config_page(content)
+        assert config == {"theme": "dark"}
+
+
 class TestRealWorldConfig:
     """Tests with real-world CONFIG.md content."""
 

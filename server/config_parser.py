@@ -31,11 +31,73 @@ def set_nested(d: Dict[str, Any], key: str, value: Any) -> None:
     d[parts[-1]] = value
 
 
+def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    """Deep merge two dictionaries, with override taking precedence.
+
+    Args:
+        base: Base dictionary
+        override: Dictionary to merge in (takes precedence)
+
+    Returns:
+        Merged dictionary
+    """
+    result = base.copy()
+    for key, value in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+def _extract_balanced_braces(text: str) -> str | None:
+    """Extract a balanced brace expression from text starting with '{'.
+
+    Args:
+        text: Text starting with '{'
+
+    Returns:
+        The balanced brace expression including outer braces, or None if invalid
+    """
+    if not text or text[0] != "{":
+        return None
+
+    depth = 0
+    in_string = False
+    string_char = None
+
+    for i, char in enumerate(text):
+        # Handle string literals
+        if char in ('"', "'") and (i == 0 or text[i - 1] != "\\"):
+            if not in_string:
+                in_string = True
+                string_char = char
+            elif char == string_char:
+                in_string = False
+                string_char = None
+            continue
+
+        if in_string:
+            continue
+
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[: i + 1]
+
+    return None  # Unbalanced braces
+
+
 def parse_config_page(content: str) -> Dict[str, Any]:
     """Parse CONFIG.md and extract config.set() values.
 
     Extracts space-lua code blocks from the markdown content and parses
-    config.set("key", value) calls using the slpp Lua parser.
+    config.set() calls using the slpp Lua parser. Supports both syntaxes:
+
+    1. config.set("key", value) - dot-notation key with value
+    2. config.set { key = value } - Lua table syntax
 
     Args:
         content: Raw markdown content of CONFIG.md
@@ -46,10 +108,13 @@ def parse_config_page(content: str) -> Dict[str, Any]:
     Example:
         ```space-lua
         config.set("mcp.proposals.path_prefix", "_Proposals/")
-        config.set("mcp.proposals.cleanup_after_days", 14)
+        config.set {
+          theme = "dark",
+          mcp = { proposals = { cleanup_after_days = 14 } }
+        }
         ```
 
-        Returns: {"mcp": {"proposals": {"path_prefix": "_Proposals/", "cleanup_after_days": 14}}}
+        Returns: {"theme": "dark", "mcp": {"proposals": {"path_prefix": "_Proposals/", "cleanup_after_days": 14}}}
     """
     # Extract space-lua blocks
     lua_blocks = re.findall(r"```space-lua\n(.*?)```", content, re.DOTALL)
@@ -57,20 +122,20 @@ def parse_config_page(content: str) -> Dict[str, Any]:
     config: Dict[str, Any] = {}
 
     for block in lua_blocks:
-        # Match config.set("key", value) calls
+        # Pattern 1: config.set("key", value) - dot-notation syntax
         # Value can be: string, number, boolean, or table
         # The lookahead ensures we stop at the next config.set, comment, end of block, or newline
-        pattern = (
+        pattern_dotnotation = (
             r'config\.set\s*\(\s*"([^"]+)"\s*,\s*(.+?)\s*\)(?=\s*(?:config\.|--|$|\n))'
         )
-        matches = re.findall(pattern, block, re.MULTILINE)
+        matches = re.findall(pattern_dotnotation, block, re.MULTILINE)
 
         for key, value_str in matches:
             try:
                 # Use slpp to parse Lua literals
                 parsed = lua.decode(value_str)
                 set_nested(config, key, parsed)
-                logger.debug(f"Parsed config: {key} = {parsed}")
+                logger.debug(f"Parsed config (dot-notation): {key} = {parsed}")
             except Exception as e:
                 # Fall back to simple parsing for edge cases
                 value_str = value_str.strip()
@@ -86,6 +151,22 @@ def parse_config_page(content: str) -> Dict[str, Any]:
                     set_nested(config, key, value_str[1:-1])
                 else:
                     logger.warning(f"Could not parse config value for {key}: {e}")
+
+        # Pattern 2: config.set { ... } - Lua table syntax
+        # Find config.set followed by opening brace, then extract balanced braces
+        table_start_pattern = r"config\.set\s*\{"
+        for match in re.finditer(table_start_pattern, block):
+            # Position of opening { in the block
+            brace_pos = match.end() - 1
+            table_str = _extract_balanced_braces(block[brace_pos:])
+            if table_str:
+                try:
+                    parsed = lua.decode(table_str)
+                    if isinstance(parsed, dict):
+                        config = _deep_merge(config, parsed)
+                        logger.debug(f"Parsed config (table): {parsed}")
+                except Exception as e:
+                    logger.warning(f"Could not parse config table: {e}")
 
     return config
 
