@@ -25,9 +25,9 @@ class SpaceWatcher(FileSystemEventHandler):
         db_path: str = None,
     ):
         self.space_path = space_path
-        self.graph_db = graph_db if graph_db else GraphDB("/db")
-        self.parser = parser if parser else SpaceParser()
         self.db_path = db_path or os.getenv("DB_PATH", "/data/ladybug")
+        self.graph_db = graph_db if graph_db else GraphDB(self.db_path)
+        self.parser = parser if parser else SpaceParser()
         self.debounce_time = {}
         self.processing_lock = threading.Lock()
         self.currently_processing = set()

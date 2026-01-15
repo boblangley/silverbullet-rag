@@ -46,6 +46,18 @@ class TestSpaceWatcherInit:
 
         assert watcher.parser is parser
 
+    def test_init_uses_db_path_env_var(
+        self, temp_space_path, temp_db_path, monkeypatch
+    ):
+        """Test that SpaceWatcher uses DB_PATH env var for GraphDB."""
+        monkeypatch.setenv("DB_PATH", temp_db_path)
+
+        # Create watcher without passing graph_db - should use DB_PATH env var
+        watcher = SpaceWatcher(temp_space_path)
+
+        assert watcher.db_path == temp_db_path
+        assert watcher.graph_db is not None
+
 
 class TestHashCaching:
     """Tests for file hash caching functionality."""
