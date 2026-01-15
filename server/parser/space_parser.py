@@ -109,6 +109,27 @@ class SpaceParser:
 
         return False
 
+    def _should_skip_directory(self, dir_path: Path) -> bool:
+        """Check if a directory should be skipped during indexing.
+
+        Skips:
+        - Hidden directories (starting with .)
+        - _Proposals directory
+
+        Args:
+            dir_path: Path to check (can be relative or absolute)
+
+        Returns:
+            True if directory should be skipped
+        """
+        # Check each part of the path for hidden directories
+        for part in dir_path.parts:
+            if part.startswith("."):
+                return True
+            if part == "_Proposals":
+                return True
+        return False
+
     def parse_space(
         self, dir_path: str, expand_transclusions: bool = True
     ) -> List[Chunk]:
@@ -641,17 +662,23 @@ class SpaceParser:
         for md_file in space_path.glob("**/*.md"):
             relative_path = md_file.relative_to(space_path)
 
+            # Skip files in hidden directories
+            if self._should_skip_directory(relative_path):
+                continue
+
             # Add all parent folders
             current = relative_path.parent
             while current != Path("."):
-                folders.add(str(current))
+                if not self._should_skip_directory(current):
+                    folders.add(str(current))
                 current = current.parent
 
         # Also add any directories that exist (even without .md files)
         for item in space_path.rglob("*"):
             if item.is_dir():
                 relative = item.relative_to(space_path)
-                folders.add(str(relative))
+                if not self._should_skip_directory(relative):
+                    folders.add(str(relative))
 
         return sorted(list(folders))
 
@@ -673,11 +700,13 @@ class SpaceParser:
         for folder in space_path.rglob("*"):
             if folder.is_dir():
                 relative_folder = folder.relative_to(space_path)
+                # Skip hidden directories
+                if self._should_skip_directory(relative_folder):
+                    continue
                 # Check for sibling .md file with same name as folder
                 index_file = folder.parent / f"{folder.name}.md"
                 if index_file.exists():
                     relative_index = index_file.relative_to(space_path)
                     index_map[str(relative_folder)] = str(relative_index)
 
-        return index_map
         return index_map

@@ -194,6 +194,36 @@ class TestFolderHierarchyParsing:
         assert "Projects/Project1" in folders
         assert "Area" in folders
 
+    def test_parser_excludes_hidden_directories(self, temp_space_path):
+        """SpaceParser should exclude hidden directories like .git from folder paths."""
+        from server.parser.space_parser import SpaceParser
+
+        # Create normal folder structure
+        Path(temp_space_path, "Projects").mkdir()
+        Path(temp_space_path, "Projects/test.md").write_text("# Test")
+
+        # Create hidden directories (like .git)
+        Path(temp_space_path, ".git").mkdir()
+        Path(temp_space_path, ".git/objects").mkdir()
+        Path(temp_space_path, ".git/refs").mkdir()
+        Path(temp_space_path, ".hidden").mkdir()
+
+        # Create _Proposals directory (should also be excluded)
+        Path(temp_space_path, "_Proposals").mkdir()
+
+        parser = SpaceParser()
+        folders = parser.get_folder_paths(temp_space_path)
+
+        # Normal folders should be included
+        assert "Projects" in folders
+
+        # Hidden directories should be excluded
+        assert ".git" not in folders
+        assert ".git/objects" not in folders
+        assert ".git/refs" not in folders
+        assert ".hidden" not in folders
+        assert "_Proposals" not in folders
+
     def test_parser_detects_folder_index_pages(self, temp_space_path):
         """Parser should detect when Folder.md exists (sibling, not Folder/index.md)."""
         from server.parser.space_parser import SpaceParser
