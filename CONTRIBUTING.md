@@ -152,7 +152,7 @@ Alternatively, run servers locally in separate terminals:
 export SPACE_PATH=/path/to/your/silverbullet/space
 export DB_PATH=/tmp/test-ladybug.db
 export EMBEDDING_PROVIDER=local
-python -m server.mcp_http_server
+python -m server.mcp
 
 # Terminal 2: Run MCP integration tests
 RUN_INTEGRATION_TESTS=true pytest tests/test_mcp_http.py -v
@@ -274,7 +274,7 @@ silverbullet-rag/
 │   │   ├── rag.proto       # Protocol definition
 │   │   └── rag_pb2*.py     # Generated code
 │   ├── pipe/               # Open WebUI integration
-│   ├── mcp_http_server.py  # MCP HTTP server
+│   ├── mcp/                # MCP HTTP server package
 │   ├── grpc_server.py      # gRPC server
 │   ├── watcher.py          # File watcher
 │   ├── embeddings.py       # Embedding service
@@ -305,7 +305,7 @@ silverbullet-rag/
 
 1. Add implementation in `server/search/` or `server/db/graph.py`
 2. Add tests in `tests/test_*.py`
-3. Expose via MCP tool in `server/mcp_http_server.py`
+3. Expose via MCP tool in `server/mcp/tools/`
 4. Expose via gRPC in `server/grpc_server.py` (optional)
 5. Update `README.md`
 

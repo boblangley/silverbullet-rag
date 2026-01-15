@@ -32,7 +32,7 @@ Silverbullet Space (markdown files)
 | `GraphDB`          | `server/db/graph.py`            | LadybugDB wrapper with Cypher, BM25, and vector search           |
 | `EmbeddingService` | `server/embeddings.py`          | Embedding generation (OpenAI or local fastembed)                 |
 | `HybridSearch`     | `server/search/hybrid.py`       | Combines keyword + semantic search with RRF                      |
-| `MCP Server`       | `server/mcp_http_server.py`     | FastMCP HTTP server with 9 tools                                 |
+| `MCP Server`       | `server/mcp/`                   | FastMCP HTTP server package with 10 tools                        |
 | `Proposals`        | `server/proposals.py`           | Proposal management (propose, list, withdraw)                    |
 | `ConfigParser`     | `server/config_parser.py`       | Parse CONFIG.md space-lua blocks                                 |
 | `gRPC Server`      | `server/grpc_server.py`         | Fast binary protocol for hooks                                   |
@@ -167,16 +167,26 @@ Current relationships:
 
 ### Adding a New MCP Tool
 
-1. Add the tool function in `server/mcp_http_server.py`:
+1. Add the tool function in the appropriate `server/mcp/tools/` module:
    ```python
-   @mcp.tool()
+   # In server/mcp/tools/search.py (or pages.py, proposals.py as appropriate)
    async def my_tool(arg: str) -> Dict[str, Any]:
        """Tool description for LLM."""
        try:
-           # implementation
+           deps = get_dependencies()
+           # implementation using deps.graph_db, deps.space_parser, etc.
            return {"success": True, "result": ...}
        except Exception as e:
            return {"success": False, "error": str(e)}
+   ```
+
+2. Register the tool in `server/mcp/tools/__init__.py`:
+   ```python
+   from .search import my_tool
+
+   def register_tools(mcp: FastMCP) -> None:
+       # ... existing tools ...
+       mcp.tool()(my_tool)
    ```
 
 2. Add tests in `tests/test_mcp_http.py`
@@ -281,7 +291,7 @@ The watcher parses CONFIG.md and writes `space_config.json` for MCP server use.
 Proposal tools are only enabled if the Proposals library is installed:
 
 ```python
-# In mcp_http_server.py
+# In server/mcp/dependencies.py
 if library_installed(space_path):
     proposals_enabled = True
 ```

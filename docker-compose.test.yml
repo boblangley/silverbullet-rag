@@ -5,7 +5,7 @@ services:
   # MCP HTTP Server
   mcp-server:
     build: .
-    command: python -m server.mcp_http_server
+    command: python -m server.mcp
     environment:
       - SPACE_PATH=/space
       - DB_PATH=/data/ladybug.db

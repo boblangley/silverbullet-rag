@@ -83,7 +83,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
     restart: unless-stopped
-    command: python -m server.mcp_http_server
+    command: python -m server.mcp
 
   # gRPC server for hooks
   grpc-server:

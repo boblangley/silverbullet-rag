@@ -23,4 +23,4 @@ RUN mkdir -p /data /space
 EXPOSE 8000 50051
 
 # Default command runs MCP HTTP server
-CMD ["python", "-m", "server.mcp_http_server"]
+CMD ["python", "-m", "server.mcp"]

@@ -420,12 +420,23 @@ Run `npm install` to get started.
         Path(temp_space_path, "Projects/ClaudeCode.md").write_text(content)
 
         # Initialize the space_parser global variable
-        import server.mcp_http_server as mcp_module
+        from server.mcp import dependencies as mcp_deps
         from server.parser.space_parser import SpaceParser
 
-        mcp_module.space_parser = SpaceParser()
+        # Initialize dependencies for testing
+        from server.db.graph import GraphDB
+        from pathlib import Path as P
 
-        from server.mcp_http_server import get_project_context
+        mcp_deps._deps = mcp_deps.Dependencies(
+            graph_db=GraphDB("/tmp/test.db"),
+            space_parser=SpaceParser(temp_space_path),
+            hybrid_search=None,
+            space_path=P(temp_space_path),
+            db_path=P("/tmp"),
+            proposals_enabled=False,
+        )
+
+        from server.mcp.tools.pages import get_project_context
 
         result = await get_project_context(github_remote="anthropics/claude-code")
 
@@ -456,12 +467,23 @@ Project documentation.
         )
 
         # Initialize the space_parser global variable
-        import server.mcp_http_server as mcp_module
+        from server.mcp import dependencies as mcp_deps
         from server.parser.space_parser import SpaceParser
 
-        mcp_module.space_parser = SpaceParser()
+        # Initialize dependencies for testing
+        from server.db.graph import GraphDB
+        from pathlib import Path as P
 
-        from server.mcp_http_server import get_project_context
+        mcp_deps._deps = mcp_deps.Dependencies(
+            graph_db=GraphDB("/tmp/test.db"),
+            space_parser=SpaceParser(temp_space_path),
+            hybrid_search=None,
+            space_path=P(temp_space_path),
+            db_path=P("/tmp"),
+            proposals_enabled=False,
+        )
+
+        from server.mcp.tools.pages import get_project_context
 
         result = await get_project_context(folder_path="Projects/MyProject")
 
@@ -475,12 +497,23 @@ Project documentation.
         monkeypatch.setenv("SPACE_PATH", temp_space_path)
 
         # Initialize the space_parser global variable
-        import server.mcp_http_server as mcp_module
+        from server.mcp import dependencies as mcp_deps
         from server.parser.space_parser import SpaceParser
 
-        mcp_module.space_parser = SpaceParser()
+        # Initialize dependencies for testing
+        from server.db.graph import GraphDB
+        from pathlib import Path as P
 
-        from server.mcp_http_server import get_project_context
+        mcp_deps._deps = mcp_deps.Dependencies(
+            graph_db=GraphDB("/tmp/test.db"),
+            space_parser=SpaceParser(temp_space_path),
+            hybrid_search=None,
+            space_path=P(temp_space_path),
+            db_path=P("/tmp"),
+            proposals_enabled=False,
+        )
+
+        from server.mcp.tools.pages import get_project_context
 
         result = await get_project_context(github_remote="nonexistent/repo")
 
@@ -512,12 +545,23 @@ See [[Architecture]] and [[Setup]].
         Path(temp_space_path, "Projects/Project/Setup.md").write_text("# Setup")
 
         # Initialize the space_parser global variable
-        import server.mcp_http_server as mcp_module
+        from server.mcp import dependencies as mcp_deps
         from server.parser.space_parser import SpaceParser
 
-        mcp_module.space_parser = SpaceParser()
+        # Initialize dependencies for testing
+        from server.db.graph import GraphDB
+        from pathlib import Path as P
 
-        from server.mcp_http_server import get_project_context
+        mcp_deps._deps = mcp_deps.Dependencies(
+            graph_db=GraphDB("/tmp/test.db"),
+            space_parser=SpaceParser(temp_space_path),
+            hybrid_search=None,
+            space_path=P(temp_space_path),
+            db_path=P("/tmp"),
+            proposals_enabled=False,
+        )
+
+        from server.mcp.tools.pages import get_project_context
 
         result = await get_project_context(github_remote="test/project")
 
@@ -627,7 +671,7 @@ class TestScopedSearch:
         """hybrid_search_tool should accept scope parameter."""
         monkeypatch.setenv("SPACE_PATH", temp_space_path)
 
-        from server.mcp_http_server import hybrid_search_tool
+        from server.mcp.tools.search import hybrid_search_tool
 
         # Test that scope parameter is accepted (function signature test)
         result = await hybrid_search_tool(

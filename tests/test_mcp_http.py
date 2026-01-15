@@ -6,6 +6,8 @@ These tests should FAIL initially since the HTTP server doesn't exist yet.
 """
 
 import os
+from pathlib import Path
+
 import pytest
 import pytest_asyncio
 import httpx
@@ -32,6 +34,39 @@ async def http_client():
         yield client
 
 
+@pytest.fixture
+def initialized_deps(temp_db_path, temp_space_path, monkeypatch):
+    """Initialize dependencies for testing."""
+    monkeypatch.setenv("DB_PATH", temp_db_path)
+    monkeypatch.setenv("SPACE_PATH", temp_space_path)
+
+    from server.mcp import dependencies
+
+    # Reset global state
+    dependencies._deps = None
+
+    # Create dependencies manually for testing
+    from server.db.graph import GraphDB
+    from server.parser.space_parser import SpaceParser
+    from server.search import HybridSearch
+
+    deps = dependencies.Dependencies(
+        graph_db=GraphDB(temp_db_path),
+        space_parser=SpaceParser(temp_space_path),
+        hybrid_search=None,  # Will set after graph_db
+        space_path=Path(temp_space_path),
+        db_path=Path(temp_db_path),
+        proposals_enabled=False,
+    )
+    deps.hybrid_search = HybridSearch(deps.graph_db)
+    dependencies._deps = deps
+
+    yield deps
+
+    # Cleanup
+    dependencies._deps = None
+
+
 class TestMCPHTTPServer:
     """Test suite for MCP HTTP server with FastMCP."""
 
@@ -39,13 +74,14 @@ class TestMCPHTTPServer:
     async def test_server_startup(self):
         """GREEN: Test FastMCP server can be imported and initialized.
 
-        This should PASS now that server/mcp_http_server.py exists.
+        This should PASS now that server/mcp/ package exists.
         """
         try:
-            from server.mcp_http_server import mcp, initialize_server
+            from server.mcp import mcp
+            from server.mcp.dependencies import initialize
 
             assert mcp is not None
-            assert callable(initialize_server)
+            assert callable(initialize)
         except ImportError as e:
             pytest.fail(f"FastMCP server module not found: {e}")
 
@@ -53,14 +89,16 @@ class TestMCPHTTPServer:
     async def test_all_tools_registered(self):
         """GREEN: Test that core tools are registered with FastMCP.
 
-        This should PASS - verifies all tools are properly decorated.
+        This should PASS - verifies all tools are properly available.
         """
-        from server.mcp_http_server import (
+        from server.mcp.tools.search import (
             cypher_query,
             keyword_search,
             semantic_search,
             hybrid_search_tool,
-            read_page,
+        )
+        from server.mcp.tools.pages import read_page, get_project_context
+        from server.mcp.tools.proposals import (
             propose_change,
             list_proposals,
             withdraw_proposal,
@@ -72,23 +110,18 @@ class TestMCPHTTPServer:
         assert callable(semantic_search)
         assert callable(hybrid_search_tool)
         assert callable(read_page)
+        assert callable(get_project_context)
         assert callable(propose_change)
         assert callable(list_proposals)
         assert callable(withdraw_proposal)
 
     @pytest.mark.asyncio
-    async def test_cypher_query_tool_directly(self, temp_db_path, temp_space_path):
+    async def test_cypher_query_tool_directly(self, initialized_deps):
         """GREEN: Test cypher_query tool function directly (without HTTP).
 
         This should PASS - tests tool logic without server.
         """
-        from server.mcp_http_server import cypher_query
-        from server.db.graph import GraphDB
-
-        # Initialize graph_db for testing
-        import server.mcp_http_server as mcp_module
-
-        mcp_module.graph_db = GraphDB(temp_db_path)
+        from server.mcp.tools.search import cypher_query
 
         # Test query execution
         result = await cypher_query("MATCH (n) RETURN count(n) as count")
@@ -97,18 +130,12 @@ class TestMCPHTTPServer:
         assert result["success"] is True
 
     @pytest.mark.asyncio
-    async def test_keyword_search_tool_directly(self, temp_db_path):
+    async def test_keyword_search_tool_directly(self, initialized_deps):
         """GREEN: Test keyword_search tool function directly.
 
         This should PASS - tests tool logic without server.
         """
-        from server.mcp_http_server import keyword_search
-        from server.db.graph import GraphDB
-
-        # Initialize graph_db for testing
-        import server.mcp_http_server as mcp_module
-
-        mcp_module.graph_db = GraphDB(temp_db_path)
+        from server.mcp.tools.search import keyword_search
 
         # Test search execution
         result = await keyword_search("test")
@@ -118,16 +145,13 @@ class TestMCPHTTPServer:
 
     @pytest.mark.asyncio
     async def test_read_page_tool_directly(
-        self, sample_markdown_file, temp_space_path, monkeypatch
+        self, sample_markdown_file, initialized_deps
     ):
         """GREEN: Test read_page tool function directly.
 
         This should PASS - tests tool logic without server.
         """
-        from server.mcp_http_server import read_page
-
-        # Set SPACE_PATH environment variable
-        monkeypatch.setenv("SPACE_PATH", temp_space_path)
+        from server.mcp.tools.pages import read_page
 
         # Test reading existing page
         result = await read_page("test_page.md")
@@ -136,15 +160,12 @@ class TestMCPHTTPServer:
         assert "Test Page" in result["content"]
 
     @pytest.mark.asyncio
-    async def test_read_page_not_found(self, temp_space_path, monkeypatch):
+    async def test_read_page_not_found(self, initialized_deps):
         """GREEN: Test read_page with nonexistent page.
 
         This should PASS - tests error handling.
         """
-        from server.mcp_http_server import read_page
-
-        # Set SPACE_PATH environment variable
-        monkeypatch.setenv("SPACE_PATH", temp_space_path)
+        from server.mcp.tools.pages import read_page
 
         # Test reading nonexistent page
         result = await read_page("nonexistent.md")
@@ -152,19 +173,15 @@ class TestMCPHTTPServer:
         assert "not found" in result["error"].lower()
 
     @pytest.mark.asyncio
-    async def test_propose_change_tool_disabled(self, temp_space_path, monkeypatch):
+    async def test_propose_change_tool_disabled(self, initialized_deps):
         """GREEN: Test propose_change returns error when library not installed.
 
         This should PASS - proposal tools disabled without Proposals library.
         """
-        from server.mcp_http_server import propose_change
-        import server.mcp_http_server as mcp_module
-
-        # Set SPACE_PATH environment variable
-        monkeypatch.setenv("SPACE_PATH", temp_space_path)
+        from server.mcp.tools.proposals import propose_change
 
         # Ensure proposals are disabled (no library installed)
-        mcp_module.proposals_enabled = False
+        initialized_deps.proposals_enabled = False
 
         # Test proposing a change
         result = await propose_change(
@@ -177,15 +194,12 @@ class TestMCPHTTPServer:
         assert "not installed" in result["error"]
 
     @pytest.mark.asyncio
-    async def test_path_traversal_protection_read(self, temp_space_path, monkeypatch):
+    async def test_path_traversal_protection_read(self, initialized_deps):
         """GREEN: Test path traversal attack protection in read_page.
 
         This should PASS - security check.
         """
-        from server.mcp_http_server import read_page
-
-        # Set SPACE_PATH environment variable
-        monkeypatch.setenv("SPACE_PATH", temp_space_path)
+        from server.mcp.tools.pages import read_page
 
         # Attempt path traversal
         result = await read_page("../../../etc/passwd")
@@ -193,22 +207,15 @@ class TestMCPHTTPServer:
         assert "Invalid page name" in result["error"]
 
     @pytest.mark.asyncio
-    async def test_path_traversal_protection_propose(
-        self, temp_space_path, temp_db_path, monkeypatch
-    ):
+    async def test_path_traversal_protection_propose(self, initialized_deps):
         """GREEN: Test path traversal attack protection in propose_change.
 
         This should PASS - security check.
         """
-        from server.mcp_http_server import propose_change
-        import server.mcp_http_server as mcp_module
-
-        # Set environment variables
-        monkeypatch.setenv("SPACE_PATH", temp_space_path)
-        monkeypatch.setenv("DB_PATH", temp_db_path)
+        from server.mcp.tools.proposals import propose_change
 
         # Enable proposals for this test
-        mcp_module.proposals_enabled = True
+        initialized_deps.proposals_enabled = True
 
         # Attempt path traversal
         result = await propose_change(

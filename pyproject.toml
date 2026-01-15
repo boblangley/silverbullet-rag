@@ -38,6 +38,6 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-silverbullet-rag-mcp = "silverbullet_rag.mcp_server:main"
+silverbullet-rag-mcp = "server.mcp:main"
 silverbullet-rag-grpc = "silverbullet_rag.grpc_server:main"
 compile-proto = "grpc_tools.protoc:main"
