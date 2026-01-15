@@ -3,7 +3,7 @@
 
 import grpc
 
-from server.grpc import rag_pb2 as server_dot_grpc_dot_rag__pb2
+from server.grpc import rag_pb2 as proto_dot_rag__pb2
 
 GRPC_GENERATED_VERSION = "1.76.0"
 GRPC_VERSION = grpc.__version__
@@ -39,50 +39,56 @@ class RAGServiceStub(object):
         """
         self.Query = channel.unary_unary(
             "/silverbullet_rag.RAGService/Query",
-            request_serializer=server_dot_grpc_dot_rag__pb2.QueryRequest.SerializeToString,
-            response_deserializer=server_dot_grpc_dot_rag__pb2.QueryResponse.FromString,
+            request_serializer=proto_dot_rag__pb2.QueryRequest.SerializeToString,
+            response_deserializer=proto_dot_rag__pb2.QueryResponse.FromString,
             _registered_method=True,
         )
         self.Search = channel.unary_unary(
             "/silverbullet_rag.RAGService/Search",
-            request_serializer=server_dot_grpc_dot_rag__pb2.SearchRequest.SerializeToString,
-            response_deserializer=server_dot_grpc_dot_rag__pb2.SearchResponse.FromString,
+            request_serializer=proto_dot_rag__pb2.SearchRequest.SerializeToString,
+            response_deserializer=proto_dot_rag__pb2.SearchResponse.FromString,
             _registered_method=True,
         )
         self.SemanticSearch = channel.unary_unary(
             "/silverbullet_rag.RAGService/SemanticSearch",
-            request_serializer=server_dot_grpc_dot_rag__pb2.SemanticSearchRequest.SerializeToString,
-            response_deserializer=server_dot_grpc_dot_rag__pb2.SemanticSearchResponse.FromString,
+            request_serializer=proto_dot_rag__pb2.SemanticSearchRequest.SerializeToString,
+            response_deserializer=proto_dot_rag__pb2.SemanticSearchResponse.FromString,
             _registered_method=True,
         )
         self.HybridSearch = channel.unary_unary(
             "/silverbullet_rag.RAGService/HybridSearch",
-            request_serializer=server_dot_grpc_dot_rag__pb2.HybridSearchRequest.SerializeToString,
-            response_deserializer=server_dot_grpc_dot_rag__pb2.HybridSearchResponse.FromString,
+            request_serializer=proto_dot_rag__pb2.HybridSearchRequest.SerializeToString,
+            response_deserializer=proto_dot_rag__pb2.HybridSearchResponse.FromString,
             _registered_method=True,
         )
         self.ReadPage = channel.unary_unary(
             "/silverbullet_rag.RAGService/ReadPage",
-            request_serializer=server_dot_grpc_dot_rag__pb2.ReadPageRequest.SerializeToString,
-            response_deserializer=server_dot_grpc_dot_rag__pb2.ReadPageResponse.FromString,
+            request_serializer=proto_dot_rag__pb2.ReadPageRequest.SerializeToString,
+            response_deserializer=proto_dot_rag__pb2.ReadPageResponse.FromString,
             _registered_method=True,
         )
         self.ProposeChange = channel.unary_unary(
             "/silverbullet_rag.RAGService/ProposeChange",
-            request_serializer=server_dot_grpc_dot_rag__pb2.ProposeChangeRequest.SerializeToString,
-            response_deserializer=server_dot_grpc_dot_rag__pb2.ProposeChangeResponse.FromString,
+            request_serializer=proto_dot_rag__pb2.ProposeChangeRequest.SerializeToString,
+            response_deserializer=proto_dot_rag__pb2.ProposeChangeResponse.FromString,
             _registered_method=True,
         )
         self.ListProposals = channel.unary_unary(
             "/silverbullet_rag.RAGService/ListProposals",
-            request_serializer=server_dot_grpc_dot_rag__pb2.ListProposalsRequest.SerializeToString,
-            response_deserializer=server_dot_grpc_dot_rag__pb2.ListProposalsResponse.FromString,
+            request_serializer=proto_dot_rag__pb2.ListProposalsRequest.SerializeToString,
+            response_deserializer=proto_dot_rag__pb2.ListProposalsResponse.FromString,
             _registered_method=True,
         )
         self.WithdrawProposal = channel.unary_unary(
             "/silverbullet_rag.RAGService/WithdrawProposal",
-            request_serializer=server_dot_grpc_dot_rag__pb2.WithdrawProposalRequest.SerializeToString,
-            response_deserializer=server_dot_grpc_dot_rag__pb2.WithdrawProposalResponse.FromString,
+            request_serializer=proto_dot_rag__pb2.WithdrawProposalRequest.SerializeToString,
+            response_deserializer=proto_dot_rag__pb2.WithdrawProposalResponse.FromString,
+            _registered_method=True,
+        )
+        self.GetFolderContext = channel.unary_unary(
+            "/silverbullet_rag.RAGService/GetFolderContext",
+            request_serializer=proto_dot_rag__pb2.GetFolderContextRequest.SerializeToString,
+            response_deserializer=proto_dot_rag__pb2.GetFolderContextResponse.FromString,
             _registered_method=True,
         )
 
@@ -138,48 +144,59 @@ class RAGServiceServicer(object):
         context.set_details("Method not implemented!")
         raise NotImplementedError("Method not implemented!")
 
+    def GetFolderContext(self, request, context):
+        """Get context for an Open WebUI folder (finds pages with matching openwebui-folder frontmatter)"""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
+
 
 def add_RAGServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
         "Query": grpc.unary_unary_rpc_method_handler(
             servicer.Query,
-            request_deserializer=server_dot_grpc_dot_rag__pb2.QueryRequest.FromString,
-            response_serializer=server_dot_grpc_dot_rag__pb2.QueryResponse.SerializeToString,
+            request_deserializer=proto_dot_rag__pb2.QueryRequest.FromString,
+            response_serializer=proto_dot_rag__pb2.QueryResponse.SerializeToString,
         ),
         "Search": grpc.unary_unary_rpc_method_handler(
             servicer.Search,
-            request_deserializer=server_dot_grpc_dot_rag__pb2.SearchRequest.FromString,
-            response_serializer=server_dot_grpc_dot_rag__pb2.SearchResponse.SerializeToString,
+            request_deserializer=proto_dot_rag__pb2.SearchRequest.FromString,
+            response_serializer=proto_dot_rag__pb2.SearchResponse.SerializeToString,
         ),
         "SemanticSearch": grpc.unary_unary_rpc_method_handler(
             servicer.SemanticSearch,
-            request_deserializer=server_dot_grpc_dot_rag__pb2.SemanticSearchRequest.FromString,
-            response_serializer=server_dot_grpc_dot_rag__pb2.SemanticSearchResponse.SerializeToString,
+            request_deserializer=proto_dot_rag__pb2.SemanticSearchRequest.FromString,
+            response_serializer=proto_dot_rag__pb2.SemanticSearchResponse.SerializeToString,
         ),
         "HybridSearch": grpc.unary_unary_rpc_method_handler(
             servicer.HybridSearch,
-            request_deserializer=server_dot_grpc_dot_rag__pb2.HybridSearchRequest.FromString,
-            response_serializer=server_dot_grpc_dot_rag__pb2.HybridSearchResponse.SerializeToString,
+            request_deserializer=proto_dot_rag__pb2.HybridSearchRequest.FromString,
+            response_serializer=proto_dot_rag__pb2.HybridSearchResponse.SerializeToString,
         ),
         "ReadPage": grpc.unary_unary_rpc_method_handler(
             servicer.ReadPage,
-            request_deserializer=server_dot_grpc_dot_rag__pb2.ReadPageRequest.FromString,
-            response_serializer=server_dot_grpc_dot_rag__pb2.ReadPageResponse.SerializeToString,
+            request_deserializer=proto_dot_rag__pb2.ReadPageRequest.FromString,
+            response_serializer=proto_dot_rag__pb2.ReadPageResponse.SerializeToString,
         ),
         "ProposeChange": grpc.unary_unary_rpc_method_handler(
             servicer.ProposeChange,
-            request_deserializer=server_dot_grpc_dot_rag__pb2.ProposeChangeRequest.FromString,
-            response_serializer=server_dot_grpc_dot_rag__pb2.ProposeChangeResponse.SerializeToString,
+            request_deserializer=proto_dot_rag__pb2.ProposeChangeRequest.FromString,
+            response_serializer=proto_dot_rag__pb2.ProposeChangeResponse.SerializeToString,
         ),
         "ListProposals": grpc.unary_unary_rpc_method_handler(
             servicer.ListProposals,
-            request_deserializer=server_dot_grpc_dot_rag__pb2.ListProposalsRequest.FromString,
-            response_serializer=server_dot_grpc_dot_rag__pb2.ListProposalsResponse.SerializeToString,
+            request_deserializer=proto_dot_rag__pb2.ListProposalsRequest.FromString,
+            response_serializer=proto_dot_rag__pb2.ListProposalsResponse.SerializeToString,
         ),
         "WithdrawProposal": grpc.unary_unary_rpc_method_handler(
             servicer.WithdrawProposal,
-            request_deserializer=server_dot_grpc_dot_rag__pb2.WithdrawProposalRequest.FromString,
-            response_serializer=server_dot_grpc_dot_rag__pb2.WithdrawProposalResponse.SerializeToString,
+            request_deserializer=proto_dot_rag__pb2.WithdrawProposalRequest.FromString,
+            response_serializer=proto_dot_rag__pb2.WithdrawProposalResponse.SerializeToString,
+        ),
+        "GetFolderContext": grpc.unary_unary_rpc_method_handler(
+            servicer.GetFolderContext,
+            request_deserializer=proto_dot_rag__pb2.GetFolderContextRequest.FromString,
+            response_serializer=proto_dot_rag__pb2.GetFolderContextResponse.SerializeToString,
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -212,8 +229,8 @@ class RAGService(object):
             request,
             target,
             "/silverbullet_rag.RAGService/Query",
-            server_dot_grpc_dot_rag__pb2.QueryRequest.SerializeToString,
-            server_dot_grpc_dot_rag__pb2.QueryResponse.FromString,
+            proto_dot_rag__pb2.QueryRequest.SerializeToString,
+            proto_dot_rag__pb2.QueryResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -242,8 +259,8 @@ class RAGService(object):
             request,
             target,
             "/silverbullet_rag.RAGService/Search",
-            server_dot_grpc_dot_rag__pb2.SearchRequest.SerializeToString,
-            server_dot_grpc_dot_rag__pb2.SearchResponse.FromString,
+            proto_dot_rag__pb2.SearchRequest.SerializeToString,
+            proto_dot_rag__pb2.SearchResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -272,8 +289,8 @@ class RAGService(object):
             request,
             target,
             "/silverbullet_rag.RAGService/SemanticSearch",
-            server_dot_grpc_dot_rag__pb2.SemanticSearchRequest.SerializeToString,
-            server_dot_grpc_dot_rag__pb2.SemanticSearchResponse.FromString,
+            proto_dot_rag__pb2.SemanticSearchRequest.SerializeToString,
+            proto_dot_rag__pb2.SemanticSearchResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -302,8 +319,8 @@ class RAGService(object):
             request,
             target,
             "/silverbullet_rag.RAGService/HybridSearch",
-            server_dot_grpc_dot_rag__pb2.HybridSearchRequest.SerializeToString,
-            server_dot_grpc_dot_rag__pb2.HybridSearchResponse.FromString,
+            proto_dot_rag__pb2.HybridSearchRequest.SerializeToString,
+            proto_dot_rag__pb2.HybridSearchResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -332,8 +349,8 @@ class RAGService(object):
             request,
             target,
             "/silverbullet_rag.RAGService/ReadPage",
-            server_dot_grpc_dot_rag__pb2.ReadPageRequest.SerializeToString,
-            server_dot_grpc_dot_rag__pb2.ReadPageResponse.FromString,
+            proto_dot_rag__pb2.ReadPageRequest.SerializeToString,
+            proto_dot_rag__pb2.ReadPageResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -362,8 +379,8 @@ class RAGService(object):
             request,
             target,
             "/silverbullet_rag.RAGService/ProposeChange",
-            server_dot_grpc_dot_rag__pb2.ProposeChangeRequest.SerializeToString,
-            server_dot_grpc_dot_rag__pb2.ProposeChangeResponse.FromString,
+            proto_dot_rag__pb2.ProposeChangeRequest.SerializeToString,
+            proto_dot_rag__pb2.ProposeChangeResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -392,8 +409,8 @@ class RAGService(object):
             request,
             target,
             "/silverbullet_rag.RAGService/ListProposals",
-            server_dot_grpc_dot_rag__pb2.ListProposalsRequest.SerializeToString,
-            server_dot_grpc_dot_rag__pb2.ListProposalsResponse.FromString,
+            proto_dot_rag__pb2.ListProposalsRequest.SerializeToString,
+            proto_dot_rag__pb2.ListProposalsResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -422,8 +439,38 @@ class RAGService(object):
             request,
             target,
             "/silverbullet_rag.RAGService/WithdrawProposal",
-            server_dot_grpc_dot_rag__pb2.WithdrawProposalRequest.SerializeToString,
-            server_dot_grpc_dot_rag__pb2.WithdrawProposalResponse.FromString,
+            proto_dot_rag__pb2.WithdrawProposalRequest.SerializeToString,
+            proto_dot_rag__pb2.WithdrawProposalResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True,
+        )
+
+    @staticmethod
+    def GetFolderContext(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            "/silverbullet_rag.RAGService/GetFolderContext",
+            proto_dot_rag__pb2.GetFolderContextRequest.SerializeToString,
+            proto_dot_rag__pb2.GetFolderContextResponse.FromString,
             options,
             channel_credentials,
             insecure,

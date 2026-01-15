@@ -294,6 +294,112 @@ class RAGServiceServicer(rag_pb2_grpc.RAGServiceServicer):
                 success=False, error=str(e), message=""
             )
 
+    def GetFolderContext(self, request, context):
+        """Get context for an Open WebUI folder.
+
+        Finds pages that have an 'openwebui-folder' frontmatter property
+        matching the requested folder path.
+        """
+        try:
+            folder_path = request.folder_path
+            if not folder_path:
+                return rag_pb2.GetFolderContextResponse(
+                    success=False,
+                    error="folder_path is required",
+                    found=False,
+                    page_name="",
+                    page_content="",
+                    folder_scope="",
+                )
+
+            # Query for chunks that have openwebui-folder in frontmatter
+            # Frontmatter is stored as JSON string, so we search for the property
+            results = self.graph_db.cypher_query(
+                """
+                MATCH (c:Chunk)
+                WHERE c.frontmatter CONTAINS '"openwebui-folder"'
+                RETURN c.file_path AS file_path, c.frontmatter AS frontmatter
+                """
+            )
+
+            # Find the page whose openwebui-folder matches the request
+            matching_page = None
+
+            for result in results:
+                try:
+                    frontmatter_str = result.get("col1", "{}")
+                    frontmatter = json.loads(frontmatter_str)
+                    owui_folder = frontmatter.get("openwebui-folder", "")
+
+                    # Case-insensitive comparison, normalize slashes
+                    if owui_folder.lower().strip("/") == folder_path.lower().strip("/"):
+                        file_path = result.get("col0", "")
+                        # Convert file path to page name
+                        if "/space/" in file_path:
+                            matching_page = file_path.split("/space/", 1)[1]
+                        else:
+                            matching_page = file_path
+                        if matching_page.endswith(".md"):
+                            matching_page = matching_page[:-3]
+                        break
+                except json.JSONDecodeError:
+                    continue
+
+            if not matching_page:
+                return rag_pb2.GetFolderContextResponse(
+                    success=True,
+                    error="",
+                    found=False,
+                    page_name="",
+                    page_content="",
+                    folder_scope="",
+                )
+
+            # Read the full page content
+            page_path = self.space_path / (matching_page + ".md")
+            if not page_path.exists():
+                page_path = self.space_path / matching_page
+                if not page_path.exists():
+                    return rag_pb2.GetFolderContextResponse(
+                        success=True,
+                        error="",
+                        found=False,
+                        page_name=matching_page,
+                        page_content="",
+                        folder_scope="",
+                    )
+
+            page_content = page_path.read_text(encoding="utf-8")
+
+            # Determine folder scope for search (use folder part of page path)
+            folder_scope = ""
+            if "/" in matching_page:
+                folder_scope = "/".join(matching_page.split("/")[:-1])
+
+            logging.info(
+                f"Found folder context for '{folder_path}': "
+                f"page={matching_page}, scope={folder_scope}"
+            )
+
+            return rag_pb2.GetFolderContextResponse(
+                success=True,
+                error="",
+                found=True,
+                page_name=matching_page,
+                page_content=page_content,
+                folder_scope=folder_scope,
+            )
+        except Exception as e:
+            logging.error(f"GetFolderContext error: {e}")
+            return rag_pb2.GetFolderContextResponse(
+                success=False,
+                error=str(e),
+                found=False,
+                page_name="",
+                page_content="",
+                folder_scope="",
+            )
+
 
 async def serve(db_path="/db", space_path="/space"):
     """Run the gRPC server.

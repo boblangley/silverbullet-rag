@@ -167,6 +167,28 @@ class TestGRPCServer:
         )
         assert response.success is True
 
+    def test_get_folder_context_rpc_structure(self):
+        """Test GetFolderContext RPC message structure."""
+        from server.grpc import rag_pb2
+
+        # Test GetFolderContextRequest structure
+        request = rag_pb2.GetFolderContextRequest(folder_path="Projects/MyProject")
+        assert request.folder_path == "Projects/MyProject"
+
+        # Test GetFolderContextResponse structure
+        response = rag_pb2.GetFolderContextResponse(
+            success=True,
+            error="",
+            found=True,
+            page_name="Projects/MyProject/index",
+            page_content="# My Project\n\nProject description",
+            folder_scope="Projects/MyProject",
+        )
+        assert response.success is True
+        assert response.found is True
+        assert response.page_name == "Projects/MyProject/index"
+        assert "My Project" in response.page_content
+
     def test_grpc_servicer_can_be_instantiated(self, temp_db_path, temp_space_path):
         """Test that RAGServiceServicer can be created.
 
@@ -185,6 +207,7 @@ class TestGRPCServer:
         assert hasattr(servicer, "ProposeChange")
         assert hasattr(servicer, "ListProposals")
         assert hasattr(servicer, "WithdrawProposal")
+        assert hasattr(servicer, "GetFolderContext")
 
     @pytest.mark.asyncio
     async def test_grpc_server_starts(self):
