@@ -1,12 +1,13 @@
 version: '3.8'
 
 services:
-  # MCP HTTP Server (primary service)
-  mcp-server:
+  # Unified server: gRPC + MCP + file watcher in a single process
+  # This avoids database locking issues by sharing a single DB connection
+  silverbullet-rag:
     # Use pre-built image from GHCR (comment out 'build' and uncomment 'image' to use)
     # image: ghcr.io/YOUR_USERNAME/silverbullet-rag:latest
     build: .
-    container_name: silverbullet-rag-mcp
+    container_name: silverbullet-rag
     volumes:
       # Mount the Silverbullet space (same as Silverbullet container)
       - silverbullet-space:/space:ro
@@ -15,47 +16,17 @@ services:
     ports:
       # MCP Streamable HTTP transport
       - "8000:8000"
-    environment:
-      - DB_PATH=/data/ladybug
-      - SPACE_PATH=/space
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
-    restart: unless-stopped
-    command: python -m server.mcp
-
-  # gRPC server for hooks
-  grpc-server:
-    # image: ghcr.io/YOUR_USERNAME/silverbullet-rag:latest
-    build: .
-    container_name: silverbullet-rag-grpc
-    volumes:
-      - silverbullet-space:/space:ro
-      - ladybug-db:/data
-    ports:
+      # gRPC for hooks
       - "50051:50051"
     environment:
       - DB_PATH=/data/ladybug
       - SPACE_PATH=/space
+      - GRPC_PORT=50051
+      - MCP_PORT=8000
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
     restart: unless-stopped
-    command: python -m server.grpc_server
-
-  # File watcher service
-  watcher:
-    # image: ghcr.io/YOUR_USERNAME/silverbullet-rag:latest
-    build: .
-    container_name: silverbullet-rag-watcher
-    volumes:
-      - silverbullet-space:/space:ro
-      - ladybug-db:/data
-    environment:
-      - DB_PATH=/data/ladybug
-      - SPACE_PATH=/space
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
-    restart: unless-stopped
-    command: python -m server.watcher
+    command: python -m server
 
 volumes:
   silverbullet-space:
