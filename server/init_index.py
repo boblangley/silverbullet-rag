@@ -4,9 +4,11 @@ import argparse
 import os
 import logging
 import sys
+from pathlib import Path
 
 from .db import GraphDB
 from .parser import SpaceParser
+from .config_parser import parse_config_page, write_config_json
 
 
 def init_index(
@@ -64,6 +66,18 @@ def init_index(
     logging.info("Indexing chunks...")
     db.index_chunks(chunks)
     logging.info(f"Indexed {len(chunks)} chunks")
+
+    # Handle CONFIG.md if present
+    config_file = Path(space_path) / "CONFIG.md"
+    if config_file.exists():
+        logging.info("Parsing CONFIG.md...")
+        try:
+            content = config_file.read_text(encoding="utf-8")
+            config = parse_config_page(content)
+            write_config_json(config, Path(db_path))
+            logging.info(f"Wrote space_config.json with {len(config)} top-level keys")
+        except Exception as e:
+            logging.warning(f"Failed to parse CONFIG.md: {e}")
 
     logging.info("Index initialization complete!")
     return len(chunks)
