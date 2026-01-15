@@ -3,6 +3,7 @@
 import json
 import logging
 from datetime import date, datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import real_ladybug as lb
@@ -32,6 +33,7 @@ class GraphDB:
         db_path: str = "/db",
         enable_embeddings: bool = True,
         read_only: bool = False,
+        auto_recover: bool = True,
     ):
         """Initialize database connection.
 
@@ -41,13 +43,93 @@ class GraphDB:
             read_only: Whether to open database in read-only mode (default: False).
                        Read-only mode allows multiple processes to read the database
                        without requiring an exclusive lock.
+            auto_recover: Whether to automatically recover from WAL corruption
+                          by removing corrupted WAL files (default: True).
+                          This will lose uncommitted transactions but allow the
+                          database to start.
         """
-        self.db = lb.Database(db_path, read_only=read_only)
+        self.db_path = db_path
         self.read_only = read_only
         self.enable_embeddings = enable_embeddings
+        self.auto_recover = auto_recover
+
+        # Attempt to open database with optional recovery
+        self.db = self._open_database()
+
         self.embedding_service = EmbeddingService() if enable_embeddings else None
         if not read_only:
             self._init_schema()
+
+    def _open_database(self) -> lb.Database:
+        """Open database with automatic WAL corruption recovery.
+
+        Returns:
+            Database connection
+
+        Raises:
+            RuntimeError: If database cannot be opened even after recovery attempt
+        """
+        try:
+            return lb.Database(self.db_path, read_only=self.read_only)
+        except RuntimeError as e:
+            error_msg = str(e).lower()
+            if "corrupted wal" in error_msg or "wal" in error_msg:
+                if self.auto_recover:
+                    logger.warning(f"WAL corruption detected: {e}")
+                    logger.warning(
+                        "Attempting automatic recovery by removing WAL files..."
+                    )
+                    self._remove_wal_files()
+                    try:
+                        db = lb.Database(self.db_path, read_only=self.read_only)
+                        logger.info("Database recovery successful")
+                        return db
+                    except RuntimeError as retry_error:
+                        logger.error(f"Recovery failed: {retry_error}")
+                        logger.error("Attempting full database reset...")
+                        self._remove_all_db_files()
+                        db = lb.Database(self.db_path, read_only=self.read_only)
+                        logger.info("Database reset successful - full reindex required")
+                        return db
+                else:
+                    logger.error(f"WAL corruption detected but auto_recover=False: {e}")
+                    raise
+            else:
+                raise
+
+    def _remove_wal_files(self) -> None:
+        """Remove WAL file for the database.
+
+        LadybugDB uses a single-file database format where:
+        - Database file: <name>.lbug
+        - WAL file: <name>.lbug.wal
+        """
+        wal_file = Path(f"{self.db_path}.wal")
+
+        if wal_file.exists():
+            try:
+                wal_file.unlink()
+                logger.info(f"Removed WAL file: {wal_file}")
+            except OSError as e:
+                logger.warning(f"Failed to remove WAL file {wal_file}: {e}")
+        else:
+            logger.warning(f"WAL file not found: {wal_file}")
+
+    def _remove_all_db_files(self) -> None:
+        """Remove all database files for a complete reset.
+
+        Removes both the main database file and its WAL file.
+        """
+        db_file = Path(self.db_path)
+        wal_file = Path(f"{self.db_path}.wal")
+
+        for f in [db_file, wal_file]:
+            if f.exists():
+                try:
+                    f.unlink()
+                    logger.info(f"Removed: {f}")
+                except OSError as e:
+                    logger.warning(f"Failed to remove {f}: {e}")
 
     def _init_schema(self) -> None:
         """Initialize database schema with node and relationship types."""
