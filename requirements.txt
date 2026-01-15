@@ -17,6 +17,9 @@ markdown-it-py>=3.0.0
 # YAML frontmatter parsing
 pyyaml>=6.0
 
+# Lua literal parsing (for CONFIG.md config.set() values)
+slpp>=1.2.3
+
 # Data validation
 pydantic>=2.5.0
 
