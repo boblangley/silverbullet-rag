@@ -41,3 +41,7 @@ build-backend = "poetry.core.masonry.api"
 silverbullet-rag-mcp = "server.mcp:main"
 silverbullet-rag-grpc = "server.grpc.server:main"
 compile-proto = "grpc_tools.protoc:main"
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"

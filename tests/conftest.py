@@ -8,6 +8,14 @@ from typing import Generator
 import pytest
 
 
+def pytest_configure(config):
+    """Configure pytest."""
+    # Register markers
+    config.addinivalue_line(
+        "markers", "e2e: mark test as end-to-end test requiring Silverbullet"
+    )
+
+
 @pytest.fixture
 def temp_db_path() -> Generator[str, None, None]:
     """Create a temporary database file path for testing.
