@@ -10,6 +10,7 @@ A RAG (Retrieval-Augmented Generation) system for [Silverbullet](https://silverb
 - **Hybrid Search**: Combines keyword + semantic using Reciprocal Rank Fusion
 - **Silverbullet v2**: Transclusion expansion, inline attributes `[key: value]`, data blocks
 - **MCP Server**: 9 tools for AI assistants (Claude, Cursor, etc.)
+- **Open WebUI Pipe**: RAG integration with folder context mapping
 - **Proposals**: Propose changes for user review before applying
 - **gRPC API**: Fast access for Silverbullet hooks
 - **File Watcher**: Auto-reindex on changes
@@ -116,10 +117,10 @@ Silverbullet Space → File Watcher → Space Parser → Embedding Service
                                     LadybugDB
                               (Graph + Vector Index)
                                          ↓
-                    ┌────────────────────┼────────────────────┐
-                    ↓                    ↓                    ↓
-                MCP Server          gRPC Server          Open WebUI
-               (Port 8000)         (Port 50051)            Pipe
+                    ┌────────────────────┐
+                    ↓                    ↓
+                MCP Server          gRPC Server
+               (Port 8000)         (Port 50051)
 ```
 
 ## Documentation
@@ -128,6 +129,7 @@ Silverbullet Space → File Watcher → Space Parser → Embedding Service
 |----------|-------------|
 | [docs/deployment.md](docs/deployment.md) | Docker setup, compose files, production config |
 | [docs/mcp.md](docs/mcp.md) | MCP integration for various AI assistants |
+| [docs/openwebui-pipe.md](docs/openwebui-pipe.md) | Open WebUI pipe setup and folder context mapping |
 | [docs/grpc.md](docs/grpc.md) | gRPC client examples (Python, TypeScript, Rust, Go, C#) |
 | [docs/library.md](docs/library.md) | Proposals Silverbullet library |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, testing, code quality |

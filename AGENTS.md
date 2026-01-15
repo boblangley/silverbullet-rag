@@ -36,6 +36,7 @@ Silverbullet Space (markdown files)
 | `Proposals`        | `server/proposals.py`           | Proposal management (propose, list, withdraw)                    |
 | `ConfigParser`     | `server/config_parser.py`       | Parse CONFIG.md space-lua blocks                                 |
 | `gRPC Server`      | `server/grpc_server.py`         | Fast binary protocol for hooks                                   |
+| `Open WebUI Pipe`  | `openwebui/silverbullet_rag.py` | Single-file gRPC client for Open WebUI integration               |
 | `Watcher`          | `server/watcher.py`             | File system monitoring for auto-reindex                          |
 
 ## Conventions
@@ -89,17 +90,25 @@ Use semantic versioning without the `v` prefix:
 ### File Organization
 
 ```
+proto/
+└── rag.proto           # gRPC service definition (shared between server and clients)
+
 server/
-├── db/           # Database layer (GraphDB, schema)
-├── parser/       # Markdown parsing (SpaceParser, Chunk dataclass)
-├── search/       # Search implementations (BM25, semantic, hybrid)
-├── grpc/         # gRPC protocol and service
-├── pipe/         # Open WebUI integration
-└── *.py          # Server entry points (mcp, grpc, watcher)
+├── db/                 # Database layer (GraphDB, schema)
+├── parser/             # Markdown parsing (SpaceParser, Chunk dataclass)
+├── search/             # Search implementations (BM25, semantic, hybrid)
+├── grpc/               # Generated gRPC stubs for server
+└── *.py                # Server entry points (mcp, grpc, watcher)
+
+openwebui/
+└── silverbullet_rag.py # Open WebUI pipe (generated, single-file gRPC client)
+
+scripts/
+└── build_openwebui_pipe.py  # Build script for Open WebUI pipe
 
 tests/
-├── conftest.py   # Shared fixtures (mock OpenAI, temp paths)
-└── test_*.py     # Test modules matching server structure
+├── conftest.py         # Shared fixtures (mock OpenAI, temp paths)
+└── test_*.py           # Test modules matching server structure
 ```
 
 ## Important Patterns
@@ -199,12 +208,31 @@ Current relationships:
 3. Export new classes from `server/parser/__init__.py`
 4. Add tests in `tests/test_v2_features.py` or create new test file
 
+### Building the Open WebUI Pipe
+
+The Open WebUI pipe (`openwebui/silverbullet_rag.py`) is a **generated file** that embeds
+the protobuf stubs for single-file deployment to Open WebUI.
+
+**When to rebuild**: After modifying `proto/rag.proto` (adding/changing gRPC methods).
+
+```bash
+python scripts/build_openwebui_pipe.py
+```
+
+This script:
+1. Compiles `proto/rag.proto` using `grpc_tools.protoc`
+2. Generates server stubs to `server/grpc/`
+3. Extracts client code and merges it into `openwebui/silverbullet_rag.py`
+
+**Note**: The pipe logic (the `Pipe` class) is defined in the build script's `PIPE_TEMPLATE`.
+To modify pipe behavior, edit `scripts/build_openwebui_pipe.py` and re-run the build.
+
 ## Debugging Tips
 
 - **LadybugDB issues**: Check database file permissions, try `--rebuild` flag
 - **Embedding failures**: Verify `OPENAI_API_KEY`, check rate limits
 - **Parser issues**: Use `SpaceParser._extract_*` methods for isolated testing
-- **gRPC issues**: Compile proto with `python -m grpc_tools.protoc`
+- **gRPC issues**: Rebuild with `python scripts/build_openwebui_pipe.py`
 
 ## Dependencies
 
@@ -259,3 +287,57 @@ if library_installed(space_path):
 ```
 
 This prevents errors when the library isn't installed.
+
+## Open WebUI Pipe
+
+The Open WebUI pipe (`openwebui/silverbullet_rag.py`) integrates Silverbullet RAG with [Open WebUI](https://openwebui.com/) for context-aware chat.
+
+### Architecture
+
+The pipe is a **single-file gRPC client** that embeds protobuf stubs for easy deployment:
+
+```
+Open WebUI Chat → Pipe (inlet) → gRPC Server → LadybugDB
+                                      ↓
+                              Search Results
+                                      ↓
+                  Pipe (inject context) → LLM
+```
+
+### Folder Context Mapping
+
+The pipe supports automatic project context injection using the `openwebui-folder` frontmatter property:
+
+1. User creates a Silverbullet page with frontmatter:
+   ```yaml
+   ---
+   openwebui-folder: Projects/MyProject
+   ---
+   ```
+
+2. User creates matching folder in Open WebUI: `Projects/MyProject`
+
+3. When chatting in that folder:
+   - Pipe calls `GetFolderContext` RPC to find matching page
+   - Full page content is injected as "Project Context"
+   - Searches are scoped to the Silverbullet folder
+
+### Key gRPC Methods Used
+
+| Method | Purpose |
+|--------|---------|
+| `GetFolderContext` | Find page by `openwebui-folder` frontmatter |
+| `HybridSearch` | Combined keyword + semantic search |
+| `SemanticSearch` | Vector similarity search |
+| `Search` | BM25 keyword search |
+
+### Modifying the Pipe
+
+The pipe logic is defined in `scripts/build_openwebui_pipe.py` in the `PIPE_TEMPLATE` variable.
+
+To modify:
+1. Edit the `PIPE_TEMPLATE` in `scripts/build_openwebui_pipe.py`
+2. Run `python scripts/build_openwebui_pipe.py` to regenerate
+3. Upload the new `openwebui/silverbullet_rag.py` to Open WebUI
+
+See [docs/openwebui-pipe.md](docs/openwebui-pipe.md) for detailed setup instructions.
