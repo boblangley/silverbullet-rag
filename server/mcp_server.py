@@ -69,24 +69,6 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
-            name="update_page",
-            description="Update or create a Silverbullet page",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "page_name": {
-                        "type": "string",
-                        "description": "Name of the page to update",
-                    },
-                    "content": {
-                        "type": "string",
-                        "description": "New content for the page",
-                    },
-                },
-                "required": ["page_name", "content"],
-            },
-        ),
-        Tool(
             name="semantic_search",
             description="Search for semantically similar content using AI embeddings",
             inputSchema={
@@ -196,26 +178,6 @@ async def call_tool(name: str, arguments: Any) -> CallToolResult:
 
             content = page_path.read_text()
             return CallToolResult(content=[TextContent(type="text", text=content)])
-
-        elif name == "update_page":
-            page_name = arguments["page_name"]
-            content = arguments["content"]
-            space_dir = Path("/space")
-            page_path = space_dir / page_name
-
-            # Security check
-            if not page_path.resolve().is_relative_to(space_dir.resolve()):
-                raise ValueError("Invalid page name")
-
-            page_path.write_text(content)
-
-            # Re-index the updated page
-            chunks = parser.parse_space(str(space_dir))
-            graph_db.index_chunks(chunks)
-
-            return CallToolResult(
-                content=[TextContent(type="text", text="Page updated successfully")]
-            )
 
         elif name == "semantic_search":
             query = arguments["query"]
