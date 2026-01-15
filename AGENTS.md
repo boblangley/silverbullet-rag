@@ -69,6 +69,17 @@ ruff check server/ tests/ --fix
 ruff format server/ tests/
 ```
 
+### Dependencies
+
+**IMPORTANT**: This project has two dependency files that must stay in sync:
+- `pyproject.toml` - Used for local development (`pip install -e .`)
+- `requirements.txt` - Used by CI (`.github/workflows/ci.yml`)
+
+When adding a new dependency:
+1. Add to `pyproject.toml` under `[project.dependencies]`
+2. Also add to `requirements.txt` with the same version constraint
+3. CI will fail if a dependency is in pyproject.toml but missing from requirements.txt
+
 ### File Organization
 
 ```
