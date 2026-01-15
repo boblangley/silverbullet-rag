@@ -72,6 +72,22 @@ See [docs/mcp.md](docs/mcp.md) for Claude Code, Cursor, VS Code, and JetBrains s
 | `list_proposals` | List pending/accepted/rejected proposals |
 | `withdraw_proposal` | Withdraw a pending proposal |
 
+## Silverbullet Library
+
+This project includes the **AI-Proposals** library for Silverbullet that enables AI assistants to propose changes for user review. Instead of directly modifying pages, AI assistants create proposals that you can review with inline diffs and accept or reject.
+
+### Installing the Library
+
+Use Silverbullet's built-in Library Manager:
+
+1. Run the `Library: Manager` command in Silverbullet
+2. Add this repository to your repositories list
+3. Install the AI-Proposals library
+
+Once installed, the proposal MCP tools become available, and you can review proposals directly in Silverbullet.
+
+See [docs/library.md](docs/library.md) for detailed documentation on the proposal system.
+
 ## Configuration
 
 | Variable | Default | Description |
@@ -113,9 +129,9 @@ Silverbullet Space → File Watcher → Space Parser → Embedding Service
 | [docs/deployment.md](docs/deployment.md) | Docker setup, compose files, production config |
 | [docs/mcp.md](docs/mcp.md) | MCP integration for various AI assistants |
 | [docs/grpc.md](docs/grpc.md) | gRPC client examples (Python, TypeScript, Rust, Go, C#) |
+| [docs/library.md](docs/library.md) | AI-Proposals Silverbullet library |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, testing, code quality |
 | [AGENTS.md](AGENTS.md) | Coding assistant instructions, architecture details |
-| [docs/design/silverbullet-proposal-plug.md](docs/design/silverbullet-proposal-plug.md) | AI Proposals system design |
 
 ## Graph Schema
 
