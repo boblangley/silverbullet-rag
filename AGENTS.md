@@ -80,6 +80,12 @@ When adding a new dependency:
 2. Also add to `requirements.txt` with the same version constraint
 3. CI will fail if a dependency is in pyproject.toml but missing from requirements.txt
 
+### Version Tagging
+
+Use semantic versioning without the `v` prefix:
+- `0.2.0` ✓ (correct)
+- `v0.2.0` ✗ (incorrect - don't use `v` prefix)
+
 ### File Organization
 
 ```
