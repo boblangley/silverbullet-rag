@@ -18,13 +18,22 @@ services:
       - "8000:8000"
       # gRPC for hooks
       - "50051:50051"
+      # Health check endpoint (optional, for external monitoring)
+      # - "8080:8080"
     environment:
       - DB_PATH=/data/ladybug
       - SPACE_PATH=/space
       - GRPC_PORT=50051
       - MCP_PORT=8000
+      - HEALTH_PORT=8080
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
     command: python -m server
 

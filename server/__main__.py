@@ -28,6 +28,7 @@ from .mcp import dependencies as mcp_deps
 from .mcp.server import create_mcp_server
 from .parser import SpaceParser
 from .search import HybridSearch
+from .health import HealthServer
 from .watcher import SpaceWatcher
 
 logging.basicConfig(
@@ -46,11 +47,13 @@ class UnifiedServer:
         space_path: str = "/space",
         grpc_port: int = 50051,
         mcp_port: int = 8000,
+        health_port: int = 8080,
     ):
         self.db_path = Path(db_path)
         self.space_path = Path(space_path)
         self.grpc_port = grpc_port
         self.mcp_port = mcp_port
+        self.health_port = health_port
 
         # Shared database connection (READ_WRITE for indexing)
         logger.info(f"Initializing shared GraphDB at {db_path}...")
@@ -64,6 +67,7 @@ class UnifiedServer:
         self.grpc_server = None
         self.watcher_observer = None
         self.space_watcher = None
+        self.health_server = None
 
         # Shutdown event
         self._shutdown_event = asyncio.Event()
@@ -145,9 +149,22 @@ class UnifiedServer:
         mcp_server = create_mcp_server(self.mcp_port)
         mcp_server.run(transport="streamable-http")
 
+    def _start_health_server(self):
+        """Start the health check HTTP server."""
+        self.health_server = HealthServer(
+            port=self.health_port,
+            grpc_port=self.grpc_port,
+            mcp_port=self.mcp_port,
+        )
+        self.health_server.start()
+
     async def _shutdown(self):
         """Graceful shutdown of all services."""
         logger.info("Shutting down services...")
+
+        # Stop health server first
+        if self.health_server:
+            self.health_server.stop()
 
         # Stop file watcher
         if self.watcher_observer:
@@ -188,9 +205,13 @@ class UnifiedServer:
             mcp_thread = threading.Thread(target=self._run_mcp_server, daemon=True)
             mcp_thread.start()
 
+            # Start health check server
+            self._start_health_server()
+
             logger.info("All services started successfully")
-            logger.info(f"  - gRPC: port {self.grpc_port}")
-            logger.info(f"  - MCP:  port {self.mcp_port}")
+            logger.info(f"  - gRPC:   port {self.grpc_port}")
+            logger.info(f"  - MCP:    port {self.mcp_port}")
+            logger.info(f"  - Health: port {self.health_port}")
             logger.info(f"  - Watcher: monitoring {self.space_path}")
 
             # Wait for shutdown signal
@@ -206,12 +227,14 @@ def main():
     space_path = os.getenv("SPACE_PATH", "/space")
     grpc_port = int(os.getenv("GRPC_PORT", "50051"))
     mcp_port = int(os.getenv("MCP_PORT", "8000"))
+    health_port = int(os.getenv("HEALTH_PORT", "8080"))
 
     server = UnifiedServer(
         db_path=db_path,
         space_path=space_path,
         grpc_port=grpc_port,
         mcp_port=mcp_port,
+        health_port=health_port,
     )
 
     asyncio.run(server.run())
