@@ -170,7 +170,7 @@ def get_proposals_config(db_path: Path) -> Dict[str, Any]:
     """Get proposal-related configuration from space config.
 
     Args:
-        db_path: Path to the database directory
+        db_path: Path to the database file (e.g., /data/ladybug)
 
     Returns:
         Dict with proposal config (path_prefix, cleanup_after_days, etc.)

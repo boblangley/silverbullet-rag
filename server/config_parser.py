@@ -95,7 +95,7 @@ def write_config_json(config: Dict[str, Any], db_path: Path) -> None:
 
     Args:
         config: Parsed configuration dictionary
-        db_path: Path to the database directory
+        db_path: Path to the database file (e.g., /data/ladybug)
     """
     config_path = db_path.parent / "space_config.json"
     config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -107,7 +107,7 @@ def load_config_json(db_path: Path) -> Dict[str, Any]:
     """Load space config from JSON file.
 
     Args:
-        db_path: Path to the database directory
+        db_path: Path to the database file (e.g., /data/ladybug)
 
     Returns:
         Parsed configuration dictionary, or empty dict if not found
