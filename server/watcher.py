@@ -212,6 +212,9 @@ class SpaceWatcher(FileSystemEventHandler):
             space_path = Path(self.space_path)
             for md_file in space_path.glob("**/*.md"):
                 self._update_file_hash(str(md_file))
+                # Handle CONFIG.md specially during full reindex
+                if md_file.name == "CONFIG.md":
+                    self._handle_config_change(str(md_file))
             logging.info(f"Cached hashes for {len(self.file_hashes)} files")
         except Exception as e:
             logging.error(f"Full reindexing error: {e}")
