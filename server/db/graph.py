@@ -27,17 +27,27 @@ class DateTimeEncoder(json.JSONEncoder):
 class GraphDB:
     """LadybugDB graph database wrapper."""
 
-    def __init__(self, db_path: str = "/db", enable_embeddings: bool = True):
+    def __init__(
+        self,
+        db_path: str = "/db",
+        enable_embeddings: bool = True,
+        read_only: bool = False,
+    ):
         """Initialize database connection.
 
         Args:
             db_path: Path to the database directory
             enable_embeddings: Whether to enable embedding generation (default: True)
+            read_only: Whether to open database in read-only mode (default: False).
+                       Read-only mode allows multiple processes to read the database
+                       without requiring an exclusive lock.
         """
-        self.db = lb.Database(db_path)
+        self.db = lb.Database(db_path, read_only=read_only)
+        self.read_only = read_only
         self.enable_embeddings = enable_embeddings
         self.embedding_service = EmbeddingService() if enable_embeddings else None
-        self._init_schema()
+        if not read_only:
+            self._init_schema()
 
     def _init_schema(self) -> None:
         """Initialize database schema with node and relationship types."""

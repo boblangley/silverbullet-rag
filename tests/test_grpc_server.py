@@ -110,7 +110,8 @@ class TestGRPCServer:
         """
         from server.grpc_server import RAGServiceServicer
 
-        servicer = RAGServiceServicer(temp_db_path, temp_space_path)
+        # Use read_only=False for test since we're creating a fresh database
+        servicer = RAGServiceServicer(temp_db_path, temp_space_path, read_only=False)
         assert servicer is not None
         assert hasattr(servicer, "Query")
         assert hasattr(servicer, "Search")

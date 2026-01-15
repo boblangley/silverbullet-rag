@@ -17,11 +17,12 @@ from .search import HybridSearch
 class RAGServiceServicer(rag_pb2_grpc.RAGServiceServicer):
     """gRPC service implementation."""
 
-    def __init__(self, db_path="/db", space_path="/space"):
-        self.graph_db = GraphDB(db_path)
+    def __init__(self, db_path="/db", space_path="/space", read_only=True):
+        self.graph_db = GraphDB(db_path, read_only=read_only)
         self.parser = SpaceParser()
         self.hybrid_search = HybridSearch(self.graph_db)
         self.space_path = space_path
+        self.read_only = read_only
 
     def Query(self, request, context):
         """Execute a Cypher query."""

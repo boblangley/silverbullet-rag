@@ -462,19 +462,14 @@ async def initialize_server():
     db_path = os.getenv("DB_PATH", "/data/ladybug")
     space_path = os.getenv("SPACE_PATH", "/space")
 
-    # Initialize graph database
-    logger.info(f"Initializing GraphDB at {db_path}...")
-    graph_db = GraphDB(db_path)
+    # Initialize graph database in read-only mode
+    # Indexing is handled by init_index.py or SpaceWatcher, not the MCP server
+    logger.info(f"Initializing GraphDB at {db_path} (read-only)...")
+    graph_db = GraphDB(db_path, read_only=True)
 
-    # Initialize space parser
+    # Initialize space parser (for any parsing needs, not indexing)
     logger.info(f"Initializing SpaceParser for {space_path}...")
     space_parser = SpaceParser(space_path)
-
-    # Parse and index entire space on startup
-    logger.info("Indexing Silverbullet space...")
-    chunks = space_parser.parse_space(space_path)
-    graph_db.index_chunks(chunks)
-    logger.info(f"Indexed {len(chunks)} chunks")
 
     # Initialize hybrid search
     hybrid_search = HybridSearch(graph_db)
