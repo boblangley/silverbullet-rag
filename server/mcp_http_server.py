@@ -172,8 +172,13 @@ async def get_project_context(
     This tool finds and returns the project index page and related metadata.
     Use this to inject relevant context when working on a project.
 
+    IMPORTANT: When using github_remote, first check the actual git remote of the
+    repository (e.g., `git remote -v`) rather than guessing. The remote format
+    should be "owner/repo" (e.g., "boblangley/silverbullet-rag").
+
     Args:
-        github_remote: GitHub repository in "org/repo" format (e.g., "anthropics/claude-code")
+        github_remote: GitHub repository in "owner/repo" format. Get this from
+            `git remote -v` output, not by guessing from the repo name.
         folder_path: Folder path in Silverbullet space (e.g., "Projects/MyProject")
 
     Returns:
