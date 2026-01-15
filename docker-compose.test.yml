@@ -1,39 +1,77 @@
 # Docker Compose configuration for running integration tests
 # Usage: ./scripts/run-integration-tests.sh
+#        ./scripts/run-integration-tests.sh --e2e  (includes Silverbullet)
 
 services:
-  # MCP HTTP Server
-  mcp-server:
-    build: .
-    command: python -m server.mcp
+  # Silverbullet instance for E2E tests
+  # Only started when running E2E tests (--e2e flag)
+  silverbullet:
+    image: ghcr.io/silverbulletmd/silverbullet:latest
     environment:
-      - SPACE_PATH=/space
-      - DB_PATH=/data/ladybug.db
-      - EMBEDDING_PROVIDER=local
-      - EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+      - SB_USER=test:testpassword
     volumes:
-      - test-space:/space:ro
-      - test-db:/data
+      - e2e-space:/space
+    ports:
+      - "3000:3000"
     networks:
       - test-network
+    profiles:
+      - e2e
 
-  # gRPC Server
-  grpc-server:
+  # Unified RAG server for standard integration tests (read-only space)
+  rag-server:
     build: .
-    command: python -m server.grpc_server
+    command: python -m server
     environment:
       - SPACE_PATH=/space
-      - DB_PATH=/data/ladybug.db
+      - DB_PATH=/data/ladybug
       - EMBEDDING_PROVIDER=local
       - EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+      - GRPC_PORT=50051
+      - MCP_PORT=8000
+      - HEALTH_PORT=8080
+      - ALLOW_LIBRARY_MANAGEMENT=true
     volumes:
       - test-space:/space:ro
       - test-db:/data
-    depends_on:
-      mcp-server:
-        condition: service_started
+    ports:
+      - "8000:8000"
+      - "50051:50051"
     networks:
       - test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # Unified RAG server for E2E tests (read-write space)
+  rag-server-e2e:
+    build: .
+    command: python -m server
+    environment:
+      - SPACE_PATH=/space
+      - DB_PATH=/data/ladybug
+      - EMBEDDING_PROVIDER=local
+      - EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+      - GRPC_PORT=50051
+      - MCP_PORT=8000
+      - HEALTH_PORT=8080
+      - ALLOW_LIBRARY_MANAGEMENT=true
+    volumes:
+      - e2e-space:/space
+      - e2e-db:/data
+    networks:
+      - test-network
+    profiles:
+      - e2e
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   # Test runner container
   test-runner:
@@ -41,23 +79,49 @@ services:
       context: .
       dockerfile: Dockerfile.test
     environment:
-      - MCP_SERVER_URL=http://mcp-server:8000
-      - GRPC_SERVER_ADDRESS=grpc-server:50051
+      - MCP_SERVER_URL=http://rag-server:8000
+      - GRPC_SERVER_ADDRESS=rag-server:50051
       - RUN_INTEGRATION_TESTS=true
     volumes:
       - test-results:/app/test-results
     depends_on:
-      mcp-server:
-        condition: service_started
-      grpc-server:
+      rag-server:
+        condition: service_healthy
+    networks:
+      - test-network
+
+  # E2E Test runner container
+  test-runner-e2e:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      - MCP_SERVER_URL=http://rag-server-e2e:8000
+      - GRPC_SERVER_ADDRESS=rag-server-e2e:50051
+      - SILVERBULLET_URL=http://silverbullet:3000
+      - SILVERBULLET_USER=test
+      - SILVERBULLET_PASSWORD=testpassword
+      - RUN_E2E_TESTS=true
+      - SPACE_PATH=/space
+    volumes:
+      - test-results:/app/test-results
+      - e2e-space:/space:ro
+    depends_on:
+      rag-server-e2e:
+        condition: service_healthy
+      silverbullet:
         condition: service_started
     networks:
       - test-network
+    profiles:
+      - e2e
 
 volumes:
   test-space:
   test-db:
   test-results:
+  e2e-space:
+  e2e-db:
 
 networks:
   test-network:
