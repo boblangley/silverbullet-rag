@@ -1,0 +1,8 @@
+name: Proposals
+version: 1.0.0
+description: Review and manage proposed changes to your Silverbullet space
+author: silverbullet-rag
+functions:
+  proposalEditor:
+    path: ./proposal_editor.ts:editor
+    editor: [".proposal"]

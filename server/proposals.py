@@ -152,6 +152,7 @@ def create_proposal_content(
     # Using yaml.dump for the frontmatter to handle escaping properly
     frontmatter = {
         "type": "proposal",
+        "tags": ["proposal"],
         "target_page": target_page,
         "title": title,
         "description": description,
