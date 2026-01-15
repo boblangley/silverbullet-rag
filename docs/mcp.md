@@ -19,7 +19,9 @@ Silverbullet RAG exposes a [Model Context Protocol (MCP)](https://modelcontextpr
 | `hybrid_search_tool`  | Combined keyword + semantic search with RRF fusion  |
 | `get_project_context` | Get project context by GitHub remote or folder path |
 | `read_page`           | Read contents of a Silverbullet page                |
-| `update_page`         | Create or update a Silverbullet page                |
+| `propose_change`      | Propose a change for user review (requires AI-Proposals library) |
+| `list_proposals`      | List pending/accepted/rejected proposals            |
+| `withdraw_proposal`   | Withdraw a pending proposal                         |
 
 ---
 
@@ -398,19 +400,58 @@ Read contents of a Silverbullet page.
 }
 ```
 
-### update_page
+### propose_change
 
-Create or update a Silverbullet page.
+Propose a change to a page for user review. Requires the AI-Proposals library installed in the Silverbullet space.
 
 ```json
 {
-  "name": "update_page",
+  "name": "propose_change",
   "arguments": {
-    "page_name": "Notes/Meeting-2024-01-15.md",
-    "content": "# Meeting Notes\n\n- Discussed API changes\n- Action items: ..."
+    "target_page": "Projects/MyProject.md",
+    "content": "# My Project\n\nUpdated content with improvements...",
+    "title": "Improve project documentation",
+    "description": "Added installation instructions and usage examples"
   }
 }
 ```
+
+Parameters:
+- `target_page`: Path to the page to modify
+- `content`: Complete proposed page content
+- `title`: Short title for the proposal
+- `description`: Explanation of why this change is proposed
+
+### list_proposals
+
+List change proposals by status.
+
+```json
+{
+  "name": "list_proposals",
+  "arguments": {
+    "status": "pending"
+  }
+}
+```
+
+Parameters:
+- `status`: Filter by status (`pending`, `accepted`, `rejected`, or `all`)
+
+### withdraw_proposal
+
+Withdraw a pending proposal.
+
+```json
+{
+  "name": "withdraw_proposal",
+  "arguments": {
+    "proposal_path": "_Proposals/Projects/MyProject.md.proposal"
+  }
+}
+```
+
+See [library.md](library.md) for detailed documentation on the proposal system.
 
 ---
 
