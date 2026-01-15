@@ -39,6 +39,7 @@ The easiest way to get started is using the included dev container with VS Code 
    pip install -r requirements.txt
    pip install pytest pytest-asyncio pytest-cov pytest-mock ruff pre-commit
    pre-commit install
+   pre-commit install --hook-type pre-push
    ```
 
 3. **Set Environment Variables**:
@@ -298,6 +299,18 @@ silverbullet-rag/
 5. **Type check**: `mypy server/`
 6. **Commit with clear message**: Describe what and why (pre-commit hooks run automatically)
 7. **Open PR**: Reference any related issues
+
+## Release Tags
+
+This project uses semantic versioning tags **without** the `v` prefix:
+- Correct: `0.6.0`, `1.0.0`, `2.1.3`
+- Incorrect: `v0.6.0`, `v1.0.0`
+
+A pre-push hook validates tag format automatically. If you accidentally create a tag with `v` prefix:
+```bash
+git tag -d v1.0.0
+git tag -a 1.0.0 -m "1.0.0: Description"
+```
 
 ## Common Development Tasks
 
