@@ -387,7 +387,7 @@ export async function editor(): Promise<{ html: string }> {
         await window.silverbullet.syscall('space.deletePage', currentPage);
 
         alert('Proposal rejected. It will be cleaned up automatically.');
-        await window.silverbullet.syscall('editor.navigate', 'Library/Proposals/Proposals');
+        await window.silverbullet.syscall('editor.navigate', 'Proposals:');
       } catch (e) {
         alert('Failed to reject proposal: ' + e.message);
       }
