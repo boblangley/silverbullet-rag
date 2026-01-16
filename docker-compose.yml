@@ -10,7 +10,8 @@ services:
     container_name: silverbullet-rag
     volumes:
       # Mount the Silverbullet space (same as Silverbullet container)
-      - silverbullet-space:/space:ro
+      # Write access needed for proposals and library installation
+      - silverbullet-space:/space
       # Mount database directory
       - ladybug-db:/data
     ports:
@@ -35,7 +36,6 @@ services:
       retries: 3
       start_period: 60s
     restart: unless-stopped
-    command: python -m server
 
 volumes:
   silverbullet-space:
