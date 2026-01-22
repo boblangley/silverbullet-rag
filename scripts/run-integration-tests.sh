@@ -211,7 +211,7 @@ else
 
     # Copy test data into volume using docker cp (works in docker-in-docker)
     docker create --name temp-copy -v silverbullet-rag_test-space:/space alpine
-    docker cp "$PROJECT_DIR/test-data/silverbullet/." temp-copy:/space/
+    docker cp "$PROJECT_DIR/vendor/silverbullet/." temp-copy:/space/
     docker rm temp-copy
 
     echo "Test data copied to volume"

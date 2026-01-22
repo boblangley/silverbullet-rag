@@ -192,7 +192,7 @@ The Proposals library in `library/` contains:
 
 To rebuild the plug after changes to `proposal_editor.ts`:
 ```bash
-cd test-data/silverbullet
+cd vendor/silverbullet
 deno run -A bin/plug-compile.ts ../../library/Proposals/plug.yaml --dist ../../library/Proposals --config deno.json
 ```
 

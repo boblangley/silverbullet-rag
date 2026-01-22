@@ -287,7 +287,7 @@ The Proposals library includes a TypeScript plug that must be compiled to JavaSc
 To compile the Proposals plug:
 
 ```bash
-cd test-data/silverbullet
+cd vendor/silverbullet
 deno run -A bin/plug-compile.ts \
   ../../library/Proposals/plug.yaml \
   --dist ../../library/Proposals \
