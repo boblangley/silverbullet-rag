@@ -75,9 +75,9 @@ def silverbullet_test_data() -> Path:
     """Path to Silverbullet test data submodule.
 
     Returns:
-        Path to test-data/silverbullet directory
+        Path to vendor/silverbullet directory
     """
-    return Path(__file__).parent.parent / "test-data" / "silverbullet"
+    return Path(__file__).parent.parent / "vendor" / "silverbullet"
 
 
 @pytest.fixture(autouse=True)
