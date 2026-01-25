@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package silverbullet_rag;
 
+option go_package = "github.com/boblangley/silverbullet-rag/internal/proto";
+
 // RAG service for fast hooks integration
 service RAGService {
   // Query the knowledge graph
@@ -102,6 +104,7 @@ message ProposeChangeRequest {
   string content = 2;
   string title = 3;
   string description = 4;
+  string proposed_by = 5;  // Identifier of the proposer (default: "claude-code")
 }
 
 message ProposeChangeResponse {

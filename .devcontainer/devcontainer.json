@@ -2,13 +2,14 @@
   "name": "SilverBullet RAG Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:noble",
   "features": {
-    "ghcr.io/devcontainers/features/python:1": {
-      "version": "3.11",
-      "installTools": true
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.24"
     },
-    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "installYarnUsingApt": false
+    },
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
-    "ghcr.io/devcontainers-community/features/deno": {}
+    "ghcr.io/devcontainers-community/features/deno:1": {}
   },
   "mounts": [
     {
@@ -30,12 +31,6 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        // Python development
-        "ms-python.python",
-        "ms-python.vscode-pylance",
-        "charliermarsh.ruff",
-        "ms-python.mypy-type-checker",
-
         // Docker and containers
         "ms-azuretools.vscode-docker",
 
@@ -50,32 +45,33 @@
         // Protocol Buffers (gRPC)
         "zxh404.vscode-proto3",
 
+        // Go development
+        "golang.go",
+
         // General productivity
         "Gruntfuggly.todo-tree",
         "eamodio.gitlens",
 
         // AI assistants
         "anthropic.claude-code",
-        "google.geminicodeassist"
+        "google.geminicodeassist",
+        "google.gemini-cli-vscode-ide-companion"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "[python]": {
-          "editor.defaultFormatter": "charliermarsh.ruff",
+        "go.useLanguageServer": true,
+        "go.lintTool": "golangci-lint",
+        "go.lintOnSave": "package",
+        "[go]": {
           "editor.formatOnSave": true,
           "editor.codeActionsOnSave": {
-            "source.fixAll.ruff": "explicit",
-            "source.organizeImports.ruff": "explicit"
+            "source.organizeImports": "explicit"
           }
-        },
-        "files.exclude": {
-          "**/__pycache__": true,
-          "**/*.pyc": true,
-          "**/.pytest_cache": true,
-          "**/.mypy_cache": true
         }
       }
     }
   },
-  "postCreateCommand": "pip install -r requirements.txt && pip install pytest pytest-asyncio pytest-cov pytest-mock ruff pre-commit && pre-commit install && scripts/install-hooks.sh"
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/usr/local/go/bin:/go/bin:/home/vscode/.deno/bin"
+  },
+  "postCreateCommand": "scripts/install-hooks.sh && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && sudo cp lib-ladybug/liblbug.so /usr/local/lib/ && sudo ldconfig"
 }

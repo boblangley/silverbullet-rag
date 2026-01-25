@@ -4,19 +4,19 @@ This document provides context for AI coding assistants working on the Silverbul
 
 ## Project Overview
 
-Silverbullet RAG is a Python-based RAG (Retrieval-Augmented Generation) system for [Silverbullet](https://silverbullet.md), a personal knowledge management system. It indexes a Silverbullet space into a knowledge graph with vector embeddings, then exposes search capabilities via MCP and gRPC.
+Silverbullet RAG is a Go-based RAG (Retrieval-Augmented Generation) system for [Silverbullet](https://silverbullet.md), a personal knowledge management system. It indexes a Silverbullet space into a knowledge graph with vector embeddings, then exposes search capabilities via MCP and gRPC.
 
 ## Architecture
 
 ```
 Silverbullet Space (markdown files)
          ↓
-    SpaceParser (markdown-it-py)
+    SpaceParser (goldmark)
          ↓
     GraphDB (LadybugDB)
     ├── Knowledge Graph (Cypher queries)
     ├── BM25 Keyword Index
-    └── HNSW Vector Index (OpenAI embeddings)
+    └── HNSW Vector Index (OpenAI/local embeddings)
          ↓
     ┌────┴────┐
     ▼         ▼
@@ -28,58 +28,43 @@ Silverbullet Space (markdown files)
 
 | Component          | Location                        | Purpose                                                          |
 | ------------------ | ------------------------------- | ---------------------------------------------------------------- |
-| `SpaceParser`      | `server/parser/space_parser.py` | Parses markdown, extracts chunks, wikilinks, tags, transclusions |
-| `GraphDB`          | `server/db/graph.py`            | LadybugDB wrapper with Cypher, BM25, and vector search           |
-| `EmbeddingService` | `server/embeddings.py`          | Embedding generation (OpenAI or local fastembed)                 |
-| `HybridSearch`     | `server/search/hybrid.py`       | Combines keyword + semantic search with RRF                      |
-| `MCP Server`       | `server/mcp/`                   | FastMCP HTTP server package with 10 tools                        |
-| `Proposals`        | `server/proposals.py`           | Proposal management (propose, list, withdraw)                    |
-| `ConfigParser`     | `server/config_parser.py`       | Parse CONFIG.md space-lua blocks                                 |
-| `gRPC Server`      | `server/grpc_server.py`         | Fast binary protocol for hooks                                   |
+| `SpaceParser`      | `internal/parser/`              | Parses markdown, extracts chunks, wikilinks, tags, transclusions |
+| `GraphDB`          | `internal/db/`                  | LadybugDB wrapper with Cypher, BM25, and vector search           |
+| `EmbeddingService` | `internal/embeddings/`          | Embedding generation (OpenAI or local hugot/ONNX)                |
+| `HybridSearch`     | `internal/search/`              | Combines keyword + semantic search with RRF                      |
+| `MCP Server`       | `internal/server/mcp.go`        | Streamable HTTP MCP server with 10 tools                         |
+| `Proposals`        | `internal/server/`              | Proposal management (propose, list, withdraw)                    |
+| `ConfigParser`     | `internal/config/`              | Parse CONFIG.md space-lua blocks via Deno sidecar                |
+| `gRPC Server`      | `internal/server/grpc.go`       | Fast binary protocol for hooks                                   |
+| `Watcher`          | `internal/watcher/`             | File system monitoring for auto-reindex                          |
 | `Open WebUI Pipe`  | `openwebui/silverbullet_rag.py` | Single-file gRPC client for Open WebUI integration               |
-| `Watcher`          | `server/watcher.py`             | File system monitoring for auto-reindex                          |
 
 ## Conventions
 
 ### Code Style
 
-- **Formatter/Linter**: Ruff (replaces Black, isort, flake8)
+- **Formatter/Linter**: golangci-lint
 - **Pre-commit**: Hooks configured in `.pre-commit-config.yaml`
-- **Type hints**: Required for all public functions
-- **Docstrings**: Google-style docstrings
-- **Imports**: Auto-sorted by ruff, grouped by stdlib → third-party → local
+- **Imports**: Auto-sorted by gofmt, grouped by stdlib → third-party → local
 
 ### Testing
 
-- **Framework**: pytest with pytest-asyncio for async tests
-- **Local embeddings**: Tests use fastembed (local provider) to avoid API calls
+- **Framework**: Go standard testing with testify assertions
+- **Local embeddings**: Tests use hugot (local ONNX provider) to avoid API calls
 - **Coverage**: Maintain high coverage, especially for search and parsing
 - **TDD**: Write tests first when adding features
 
 Run tests:
 ```bash
-python -m pytest tests/ -v
-python -m pytest tests/ --cov=server --cov-report=term-missing
+go test ./... -v
+go test ./... -cover
 ```
 
 Run linting:
 ```bash
+golangci-lint run
 pre-commit run --all-files
-# Or directly:
-ruff check server/ tests/ --fix
-ruff format server/ tests/
 ```
-
-### Dependencies
-
-**IMPORTANT**: This project has two dependency files that must stay in sync:
-- `pyproject.toml` - Used for local development (`pip install -e .`)
-- `requirements.txt` - Used by CI (`.github/workflows/ci.yml`)
-
-When adding a new dependency:
-1. Add to `pyproject.toml` under `[project.dependencies]`
-2. Also add to `requirements.txt` with the same version constraint
-3. CI will fail if a dependency is in pyproject.toml but missing from requirements.txt
 
 ### Version Tagging
 
@@ -95,12 +80,23 @@ A pre-push hook validates this. Run `scripts/install-hooks.sh` to install it.
 proto/
 └── rag.proto           # gRPC service definition (shared between server and clients)
 
-server/
+cmd/
+└── rag-server/         # Main entry point
+
+internal/
+├── config/             # Configuration parsing (CONFIG.md, space-lua)
 ├── db/                 # Database layer (GraphDB, schema)
-├── parser/             # Markdown parsing (SpaceParser, Chunk dataclass)
+├── embeddings/         # Embedding generation (OpenAI, local)
+├── parser/             # Markdown parsing (SpaceParser, Chunk struct)
+├── proto/              # Generated gRPC stubs
 ├── search/             # Search implementations (BM25, semantic, hybrid)
-├── grpc/               # Generated gRPC stubs for server
-└── *.py                # Server entry points (mcp, grpc, watcher)
+├── server/             # MCP and gRPC server implementations
+├── types/              # Shared types (Chunk, etc.)
+├── version/            # Version information
+└── watcher/            # File system monitoring
+
+deno/
+└── space_lua_runner.ts # Deno sidecar for space-lua execution
 
 openwebui/
 └── silverbullet_rag.py # Open WebUI pipe (generated, single-file gRPC client)
@@ -109,33 +105,33 @@ scripts/
 └── build_openwebui_pipe.py  # Build script for Open WebUI pipe
 
 tests/
-├── conftest.py         # Shared fixtures (mock OpenAI, temp paths)
-└── test_*.py           # Test modules matching server structure
+└── golden/             # Golden test files for parity testing
 ```
 
 ## Important Patterns
 
 ### Chunk Processing
 
-Chunks are the core data unit:
-```python
-@dataclass
-class Chunk:
-    file_path: str
-    header: str
-    content: str
-    wikilinks: List[str]
-    tags: List[str]
-    frontmatter: Dict[str, Any]
-    transclusions: List[Transclusion]      # v2: ![[page]]
-    inline_attributes: List[InlineAttribute]  # v2: [key: value]
-    data_blocks: List[DataBlock]           # v2: ```#tag yaml```
+Chunks are the core data unit (see `internal/types/chunk.go`):
+```go
+type Chunk struct {
+    FilePath         string
+    Header           string
+    Content          string
+    Wikilinks        []string
+    Tags             []string
+    Frontmatter      map[string]any
+    Transclusions    []Transclusion
+    InlineAttributes []InlineAttribute
+    DataBlocks       []DataBlock
+    Embedding        []float32
+}
 ```
 
 ### Graph Relationships
 
 When modifying the graph schema, update both:
-1. `server/db/graph.py` - Schema creation in `__init__`
+1. `internal/db/graph.go` - Schema creation in `InitSchema`
 2. `README.md` - Graph Schema section
 
 Current relationships:
@@ -154,22 +150,28 @@ Current relationships:
 - **Path traversal**: Validate all file paths against space root
 - **Input sanitization**: Handle unicode, special chars in search queries
 
-## Environment Variables
+## Configuration
 
-| Variable            | Default                  | Purpose                                    |
-| ------------------- | ------------------------ | ------------------------------------------ |
-| `SPACE_PATH`        | `/space`                 | Path to Silverbullet space                 |
-| `DB_PATH`           | `/data/ladybug`          | Path to LadybugDB database                 |
-| `EMBEDDING_PROVIDER`| `openai`                 | Provider: `openai` or `local` (fastembed)  |
-| `OPENAI_API_KEY`    | (required for openai)    | OpenAI API key for embeddings              |
-| `EMBEDDING_MODEL`   | varies by provider       | Model name (provider-specific)             |
-| `ENABLE_EMBEDDINGS` | `true`                   | Enable/disable embedding generation        |
+The server uses CLI flags:
+
+| Flag                  | Default         | Purpose                                    |
+| --------------------- | --------------- | ------------------------------------------ |
+| `--space-path`        | `/space`        | Path to Silverbullet space                 |
+| `--db-path`           | `/data/ladybug` | Path to LadybugDB database                 |
+| `--mcp-port`          | `8000`          | MCP HTTP server port                       |
+| `--grpc-port`         | `50051`         | gRPC server port                           |
+| `--health-port`       | `8080`          | Health check endpoint port                 |
+| `--embedding-provider`| `openai`        | Provider: `openai` or `local`              |
+| `--embedding-model`   | varies          | Model name (provider-specific)             |
+| `--enable-embeddings` | `true`          | Enable/disable embedding generation        |
+
+Environment variables are also supported (e.g., `SPACE_PATH`, `DB_PATH`, `OPENAI_API_KEY`).
 
 ## Common Tasks
 
-- **MCP tools**: Add to `server/mcp/tools/`, register in `__init__.py`, test in `test_mcp_http.py`
-- **Graph relationships**: Add schema in `GraphDB.__init__`, update `README.md` Graph Schema
-- **Parser changes**: Update `SpaceParser`, `Chunk` dataclass, export from `__init__.py`
+- **MCP tools**: Add to `internal/server/mcp.go`, test in `internal/server/mcp_test.go`
+- **Graph relationships**: Add schema in `internal/db/graph.go`, update `README.md` Graph Schema
+- **Parser changes**: Update `internal/parser/`, `internal/types/chunk.go`
 - **Open WebUI pipe**: Run `python scripts/build_openwebui_pipe.py` after proto changes
 
 ## Proposals System
@@ -192,7 +194,7 @@ The Proposals library in `library/` contains:
 
 To rebuild the plug after changes to `proposal_editor.ts`:
 ```bash
-cd vendor/silverbullet
+cd silverbullet
 deno run -A bin/plug-compile.ts ../../library/Proposals/plug.yaml --dist ../../library/Proposals --config deno.json
 ```
 
@@ -202,3 +204,11 @@ See [docs/openwebui-pipe.md](docs/openwebui-pipe.md) for setup. Key points:
 - Generated file embedding protobuf stubs for single-file deployment
 - Rebuild with `python scripts/build_openwebui_pipe.py` after proto changes
 - Pipe logic is in `PIPE_TEMPLATE` in the build script
+
+## Deno Sidecar
+
+The CONFIG.md space-lua execution uses a Deno sidecar (`deno/space_lua_runner.ts`):
+- Imports the same space-lua runtime as Silverbullet
+- Called via subprocess with JSON stdin/stdout
+- Returns parsed config values as JSON
+- Falls back to AST parsing if Deno is unavailable

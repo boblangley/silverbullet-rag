@@ -1,0 +1,18 @@
+{
+  "name": "@silverbullet-rag/space-lua-runner",
+  "version": "0.1.0",
+  "exports": {
+    ".": "./space_lua_runner.ts"
+  },
+  "imports": {
+    "@silverbulletmd/silverbullet/lib/tree": "../silverbullet/plug-api/lib/tree.ts",
+    "@silverbulletmd/silverbullet/lib/json": "../silverbullet/plug-api/lib/json.ts",
+    "@codemirror/language": "npm:@codemirror/language@6.12.1",
+    "@lezer/highlight": "npm:@lezer/highlight@1.2.3",
+    "@lezer/lr": "npm:@lezer/lr@1.4.7",
+    "ajv": "npm:ajv@8.17.1"
+  },
+  "compilerOptions": {
+    "lib": ["deno.ns", "dom", "dom.iterable"]
+  }
+}

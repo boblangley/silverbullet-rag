@@ -1,13 +1,4 @@
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.11
-    hooks:
-      - id: ruff
-        args: [--fix]
-        exclude: ^openwebui/
-      - id: ruff-format
-        exclude: ^openwebui/
-
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -15,6 +6,11 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
+
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v2.1.6
+    hooks:
+      - id: golangci-lint
 
 # Note: Tag format checking is done via a native git hook (.git/hooks/pre-push)
 # because pre-commit doesn't forward stdin to local scripts, which git uses
