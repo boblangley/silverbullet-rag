@@ -1,13 +1,20 @@
-# Build stage
-FROM golang:1.24-bookworm AS builder
+# Build stage - Ubuntu 24.04 for GLIBC 2.39 compatibility with liblbug.so
+FROM ubuntu:24.04 AS builder
 
 WORKDIR /build
 
-# Install build dependencies for CGO
+# Install build dependencies for CGO and Go
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Go 1.24
+RUN curl -L -o go.tar.gz https://go.dev/dl/go1.24.3.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go.tar.gz \
+    && rm go.tar.gz
+ENV PATH="/usr/local/go/bin:${PATH}"
 
 # Download LadybugDB native library
 RUN curl -L -o liblbug.tar.gz https://github.com/LadybugDB/ladybug/releases/latest/download/liblbug-linux-x86_64.tar.gz \
@@ -33,8 +40,8 @@ ENV CGO_ENABLED=1
 ENV LD_LIBRARY_PATH=/usr/local/lib
 RUN go build -o rag-server ./cmd/rag-server
 
-# Runtime stage
-FROM debian:bookworm-slim
+# Runtime stage - Ubuntu 24.04 for GLIBC compatibility
+FROM ubuntu:24.04
 
 WORKDIR /app
 
