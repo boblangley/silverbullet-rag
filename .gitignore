@@ -69,4 +69,4 @@ test-results/
 .mcp.json
 
 # Go build artifacts
-rag-server
+/rag-server

@@ -7,8 +7,11 @@ toolchain go1.24.12
 require (
 	github.com/LadybugDB/go-ladybug v0.13.1
 	github.com/fsnotify/fsnotify v1.8.0
+	github.com/knights-analytics/hugot v0.6.1
 	github.com/modelcontextprotocol/go-sdk v1.2.0
 	github.com/yuin/goldmark v1.7.8
+	google.golang.org/grpc v1.78.0
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -26,7 +29,6 @@ require (
 	github.com/gomlx/onnx-gomlx v0.3.4 // indirect
 	github.com/google/jsonschema-go v0.3.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/knights-analytics/hugot v0.6.1 // indirect
 	github.com/knights-analytics/ortgenai v0.0.1 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
@@ -49,7 +51,5 @@ require (
 	golang.org/x/term v0.38.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251029180050-ab9386a59fda // indirect
-	google.golang.org/grpc v1.78.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 )
