@@ -6,26 +6,32 @@ WORKDIR /build
 # Install build dependencies for CGO
 RUN apt-get update && apt-get install -y \
     build-essential \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Download LadybugDB native library
+RUN curl -L -o liblbug.tar.gz https://github.com/LadybugDB/ladybug/releases/latest/download/liblbug-linux-x86_64.tar.gz \
+    && tar -xzf liblbug.tar.gz \
+    && mkdir -p /usr/local/lib \
+    && mv liblbug.so /usr/local/lib/ \
+    && rm liblbug.tar.gz lbug.h \
+    && ldconfig
 
 # Copy go mod files
 COPY go.mod go.sum ./
 
-# Copy vendor directory (includes LadybugDB native library)
-COPY vendor/ ./vendor/
+# Download dependencies
+RUN go mod download
 
 # Copy source code
 COPY cmd/ ./cmd/
 COPY internal/ ./internal/
 COPY proto/ ./proto/
 
-# Copy the LadybugDB native library from lib-ladybug if vendor doesn't have it
-COPY lib-ladybug/liblbug.so ./vendor/github.com/LadybugDB/go-ladybug/lib/dynamic/linux-amd64/
-
 # Build the binary with CGO enabled
 ENV CGO_ENABLED=1
-ENV CGO_LDFLAGS="-L/build/vendor/github.com/LadybugDB/go-ladybug/lib/dynamic/linux-amd64"
-RUN go build -mod=vendor -o rag-server ./cmd/rag-server
+ENV LD_LIBRARY_PATH=/usr/local/lib
+RUN go build -o rag-server ./cmd/rag-server
 
 # Runtime stage
 FROM debian:bookworm-slim
@@ -43,20 +49,27 @@ RUN apt-get update && apt-get install -y \
 # Install Deno for CONFIG.md space-lua execution
 RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh
 
+# Download LadybugDB native library
+RUN curl -L -o liblbug.tar.gz https://github.com/LadybugDB/ladybug/releases/latest/download/liblbug-linux-x86_64.tar.gz \
+    && tar -xzf liblbug.tar.gz \
+    && mv liblbug.so /usr/local/lib/ \
+    && rm liblbug.tar.gz lbug.h \
+    && ldconfig
+
 # Copy binary from builder
 COPY --from=builder /build/rag-server /app/rag-server
 
-# Copy LadybugDB native library
-COPY --from=builder /build/vendor/github.com/LadybugDB/go-ladybug/lib/dynamic/linux-amd64/liblbug.so /usr/local/lib/
-
 # Copy Deno runner script for CONFIG.md parsing
 COPY deno/ /app/deno/
+
+# Copy SilverBullet submodule for space-lua runtime
+COPY silverbullet/ /app/silverbullet/
 
 # Copy library files for installation tool
 COPY library/ /app/library/
 
 # Copy entrypoint script
-COPY entrypoint-go.sh /entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Configure library path

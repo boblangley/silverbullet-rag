@@ -36,8 +36,10 @@ jobs:
 
       - name: Install LadybugDB native library
         run: |
-          # Copy the native library to system path
-          sudo cp lib-ladybug/liblbug.so /usr/local/lib/
+          # Download liblbug from LadybugDB releases
+          curl -L -o liblbug.tar.gz https://github.com/LadybugDB/ladybug/releases/latest/download/liblbug-linux-x86_64.tar.gz
+          tar -xzf liblbug.tar.gz
+          sudo cp liblbug.so /usr/local/lib/
           sudo ldconfig
 
       - name: Run Go tests
@@ -60,6 +62,9 @@ jobs:
         with:
           go-version: "1.24"
           cache: true
+
+      - name: Remove vendor directory if exists
+        run: rm -rf vendor/
 
       - name: Install golangci-lint
         uses: golangci/golangci-lint-action@v4
