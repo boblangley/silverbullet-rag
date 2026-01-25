@@ -5,7 +5,7 @@ This guide covers how to deploy Silverbullet RAG using Docker, including initial
 ## Prerequisites
 
 - Docker and Docker Compose
-- OpenAI API key (for embeddings)
+- OpenAI API key (for embeddings) or use local embeddings
 - Silverbullet space (mounted volume or local directory)
 
 ## Quick Start with Docker
@@ -17,48 +17,36 @@ This guide covers how to deploy Silverbullet RAG using Docker, including initial
 docker pull ghcr.io/YOUR_USERNAME/silverbullet-rag:latest
 
 # Option B: Build locally
-git clone https://github.com/YOUR_USERNAME/silverbullet-rag.git
+git clone --recurse-submodules https://github.com/YOUR_USERNAME/silverbullet-rag.git
 cd silverbullet-rag
 docker build -t silverbullet-rag .
 ```
 
-### 2. Initialize the Database
+### 2. Run the Unified Server
 
-Before running the servers, initialize the index:
-
-```bash
-docker run --rm \
-  -e OPENAI_API_KEY="your-api-key" \
-  -v /path/to/your/space:/space:ro \
-  -v silverbullet-rag-db:/data \
-  silverbullet-rag \
-  python -m server.init_index
-```
-
-This parses your Silverbullet space and creates:
-- Knowledge graph (pages, chunks, tags, folders)
-- Vector embeddings for semantic search
-- BM25 keyword index
-
-### 3. Run the MCP Server
+The Go server runs MCP, gRPC, file watcher, and health check in a single process:
 
 ```bash
 docker run -d \
-  --name silverbullet-rag-mcp \
+  --name silverbullet-rag \
   -p 8000:8000 \
+  -p 50051:50051 \
   -e OPENAI_API_KEY="your-api-key" \
   -v /path/to/your/space:/space:ro \
   -v silverbullet-rag-db:/data \
   silverbullet-rag
 ```
 
-The MCP server is now available at `http://localhost:8000/mcp`.
+The server automatically indexes your space on first startup. Services available:
+- MCP server: `http://localhost:8000/mcp`
+- gRPC server: `localhost:50051`
+- Health check: `http://localhost:8080/health`
 
 ---
 
 ## Docker Compose Setup
 
-For production deployments, use Docker Compose to run all services.
+For production deployments, use Docker Compose.
 
 ### 1. Create docker-compose.yml
 
@@ -66,56 +54,30 @@ For production deployments, use Docker Compose to run all services.
 version: '3.8'
 
 services:
-  # MCP HTTP Server (primary service)
-  mcp-server:
+  silverbullet-rag:
     image: ghcr.io/YOUR_USERNAME/silverbullet-rag:latest
     # Or build locally:
     # build: .
-    container_name: silverbullet-rag-mcp
+    container_name: silverbullet-rag
     volumes:
       - silverbullet-space:/space:ro
       - ladybug-db:/data
     ports:
-      - "8000:8000"
+      - "8000:8000"   # MCP HTTP
+      - "50051:50051" # gRPC
+      # - "8080:8080" # Health check (optional)
     environment:
       - DB_PATH=/data/ladybug
       - SPACE_PATH=/space
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
-    command: python -m server.mcp
-
-  # gRPC server for hooks
-  grpc-server:
-    image: ghcr.io/YOUR_USERNAME/silverbullet-rag:latest
-    container_name: silverbullet-rag-grpc
-    volumes:
-      - silverbullet-space:/space:ro
-      - ladybug-db:/data
-    ports:
-      - "50051:50051"
-    environment:
-      - DB_PATH=/data/ladybug
-      - SPACE_PATH=/space
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
-    restart: unless-stopped
-    command: python -m server.grpc_server
-
-  # File watcher service
-  watcher:
-    image: ghcr.io/YOUR_USERNAME/silverbullet-rag:latest
-    container_name: silverbullet-rag-watcher
-    volumes:
-      - silverbullet-space:/space:ro
-      - ladybug-db:/data
-    environment:
-      - DB_PATH=/data/ladybug
-      - SPACE_PATH=/space
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
-    restart: unless-stopped
-    command: python -m server.watcher
 
 volumes:
   silverbullet-space:
@@ -131,38 +93,27 @@ OPENAI_API_KEY=sk-your-api-key-here
 EMBEDDING_MODEL=text-embedding-3-small
 ```
 
-### 3. Initialize the Database
-
-```bash
-# First time setup - initialize the index
-docker compose run --rm mcp-server python -m server.init_index
-
-# Or rebuild from scratch
-docker compose run --rm mcp-server python -m server.init_index --rebuild
-```
-
-### 4. Start All Services
+### 3. Start the Service
 
 ```bash
 docker compose up -d
 ```
 
-### 5. View Logs
+### 4. View Logs
 
 ```bash
-# All services
+# View logs
 docker compose logs -f
 
-# Specific service
-docker compose logs -f mcp-server
-docker compose logs -f watcher
+# View specific output
+docker compose logs -f silverbullet-rag
 ```
 
 ---
 
 ## Sharing Volumes with Silverbullet
 
-If you're running Silverbullet in Docker, you'll want to share the same volume.
+If you're running Silverbullet in Docker, share the same volume.
 
 ### Example: Silverbullet + RAG
 
@@ -179,31 +130,19 @@ services:
       - "3000:3000"
     restart: unless-stopped
 
-  silverbullet-rag-mcp:
+  silverbullet-rag:
     image: ghcr.io/YOUR_USERNAME/silverbullet-rag:latest
-    container_name: silverbullet-rag-mcp
+    container_name: silverbullet-rag
     volumes:
       - silverbullet-space:/space:ro  # Read-only access
       - ladybug-db:/data
     ports:
       - "8000:8000"
+      - "50051:50051"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     depends_on:
       - silverbullet
-    restart: unless-stopped
-
-  silverbullet-rag-watcher:
-    image: ghcr.io/YOUR_USERNAME/silverbullet-rag:latest
-    container_name: silverbullet-rag-watcher
-    volumes:
-      - silverbullet-space:/space:ro
-      - ladybug-db:/data
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    depends_on:
-      - silverbullet
-    command: python -m server.watcher
     restart: unless-stopped
 
 volumes:
@@ -221,10 +160,29 @@ volumes:
 |----------|---------|-------------|
 | `SPACE_PATH` | `/space` | Path to Silverbullet space directory |
 | `DB_PATH` | `/data/ladybug` | Path to LadybugDB database directory |
+| `GRPC_PORT` | `50051` | gRPC server port |
+| `MCP_PORT` | `8000` | MCP HTTP server port |
+| `HEALTH_PORT` | `8080` | Health check endpoint port |
 | `EMBEDDING_PROVIDER` | `openai` | Embedding provider: `openai` or `local` |
 | `OPENAI_API_KEY` | (required for openai) | OpenAI API key for embeddings |
 | `EMBEDDING_MODEL` | varies by provider | Embedding model to use |
 | `ENABLE_EMBEDDINGS` | `true` | Set to `false` to disable embeddings |
+
+### CLI Flags
+
+The Go binary also accepts CLI flags:
+
+```bash
+./rag-server \
+  --space-path=/space \
+  --db-path=/data/ladybug \
+  --mcp-port=8000 \
+  --grpc-port=50051 \
+  --health-port=8080 \
+  --embedding-provider=openai \
+  --embedding-model=text-embedding-3-small \
+  --rebuild  # Optional: rebuild index on startup
+```
 
 ### Embedding Providers
 
@@ -235,25 +193,10 @@ OPENAI_API_KEY=sk-your-key
 EMBEDDING_MODEL=text-embedding-3-small  # default
 ```
 
-**Local (fastembed)** - no API key required:
+**Local (hugot/ONNX)** - no API key required:
 ```bash
 EMBEDDING_PROVIDER=local
 EMBEDDING_MODEL=BAAI/bge-small-en-v1.5  # default
-```
-
-### init_index Options
-
-```bash
-# Full rebuild (clears database first)
-python -m server.init_index --rebuild
-
-# Custom paths
-python -m server.init_index \
-  --space-path /custom/space \
-  --db-path /custom/db
-
-# Disable embeddings (faster, keyword-only search)
-python -m server.init_index --no-embeddings
 ```
 
 ### Ports
@@ -262,6 +205,7 @@ python -m server.init_index --no-embeddings
 |------|---------|----------|
 | 8000 | MCP HTTP Server | HTTP (Streamable) |
 | 50051 | gRPC Server | gRPC |
+| 8080 | Health Check | HTTP |
 
 ---
 
@@ -275,9 +219,6 @@ docker compose pull
 
 # Recreate containers
 docker compose up -d
-
-# Optional: Rebuild index if schema changed
-docker compose run --rm mcp-server python -m server.init_index --rebuild
 ```
 
 ### Update with Local Build
@@ -285,6 +226,7 @@ docker compose run --rm mcp-server python -m server.init_index --rebuild
 ```bash
 # Pull latest code
 git pull origin main
+git submodule update --init --recursive
 
 # Rebuild image
 docker compose build
@@ -293,16 +235,17 @@ docker compose build
 docker compose up -d
 ```
 
-### Rebuild Index Only
+### Rebuild Index
 
-If you need to reindex without updating the container:
+To force a full reindex:
 
 ```bash
-# Full rebuild
-docker compose run --rm mcp-server python -m server.init_index --rebuild
+# Using environment variable
+docker compose down
+docker compose run --rm -e REBUILD_INDEX=true silverbullet-rag
 
-# Or use exec on running container
-docker exec silverbullet-rag-mcp python -m server.init_index --rebuild
+# Or using CLI flag
+docker compose run --rm silverbullet-rag ./rag-server --rebuild
 ```
 
 ---
@@ -336,7 +279,7 @@ server {
 
 ```yaml
 services:
-  mcp-server:
+  silverbullet-rag:
     # ... other config ...
     deploy:
       resources:
@@ -350,23 +293,25 @@ services:
 
 ### Health Checks
 
+The server exposes a health endpoint at `/health` on port 8080:
+
 ```yaml
 services:
-  mcp-server:
+  silverbullet-rag:
     # ... other config ...
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 ```
 
 ### Logging
 
 ```yaml
 services:
-  mcp-server:
+  silverbullet-rag:
     # ... other config ...
     logging:
       driver: "json-file"
@@ -419,10 +364,10 @@ docker compose start
 
 ```bash
 # Check logs
-docker compose logs mcp-server
+docker compose logs silverbullet-rag
 
 # Common issues:
-# - Missing OPENAI_API_KEY
+# - Missing OPENAI_API_KEY (if using OpenAI embeddings)
 # - Space path doesn't exist or is empty
 # - Database path not writable
 ```
@@ -431,29 +376,28 @@ docker compose logs mcp-server
 
 Initial indexing with embeddings can be slow for large spaces:
 
-1. Consider disabling embeddings initially: `--no-embeddings`
+1. Consider disabling embeddings initially: `ENABLE_EMBEDDINGS=false`
 2. Run index during off-hours
 3. Increase container memory limits
 
 ### Watcher Not Detecting Changes
 
 ```bash
-# Check watcher logs
-docker compose logs watcher
+# Check logs
+docker compose logs silverbullet-rag | grep -i watch
 
 # Common issues:
 # - Volume mounted without inotify support
 # - macOS: fsevents may not propagate to Docker
-# - Solution: Use polling mode or trigger manual reindex
+# - Solution: Use polling mode or restart container
 ```
 
 ### Database Corruption
 
-If the database becomes corrupted:
+If the database becomes corrupted, rebuild from scratch:
 
 ```bash
-# Rebuild from scratch
-docker compose run --rm mcp-server python -m server.init_index --rebuild
+docker compose run --rm silverbullet-rag ./rag-server --rebuild
 ```
 
 ### Memory Issues

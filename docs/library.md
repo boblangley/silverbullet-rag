@@ -178,10 +178,13 @@ service SilverbulletRAG {
 
 ```python
 import grpc
-from server.grpc import rag_pb2, rag_pb2_grpc
+import rag_pb2
+import rag_pb2_grpc
+
+# Generate stubs with: python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. proto/rag.proto
 
 channel = grpc.insecure_channel('localhost:50051')
-stub = rag_pb2_grpc.SilverbulletRAGStub(channel)
+stub = rag_pb2_grpc.RAGServiceStub(channel)
 
 # Create a proposal
 response = stub.ProposeChange(rag_pb2.ProposeChangeRequest(

@@ -17,32 +17,16 @@ A RAG (Retrieval-Augmented Generation) system for [Silverbullet](https://silverb
 
 ## Quick Start
 
-### 1. Initialize the Index
+### 1. Start the Server
 
 ```bash
-docker run --rm \
-  -v silverbullet-space:/space:ro \
-  -v ladybug-db:/data \
-  -e DB_PATH=/data/ladybug \
-  -e SPACE_PATH=/space \
-  -e OPENAI_API_KEY=${OPENAI_API_KEY} \
-  ghcr.io/YOUR_USERNAME/silverbullet-rag:latest \
-  python -m server.init_index
-```
-
-Use `--rebuild` to clear and rebuild the database from scratch.
-
-### 2. Start the Server
-
-```bash
-# Create .env file
-echo "OPENAI_API_KEY=your-key-here" > .env
-
 # Start with docker-compose
 docker-compose up -d
 ```
 
-### 3. Connect Your AI Assistant
+The server will automatically index your Silverbullet space on startup.
+
+### 2. Connect Your AI Assistant
 
 Add to your MCP client config (e.g., `.mcp.json`):
 
@@ -105,9 +89,62 @@ See [docs/library.md](docs/library.md) for detailed documentation on the proposa
 **OpenAI** (default): Uses OpenAI API for embeddings. Requires `OPENAI_API_KEY`.
 - Default model: `text-embedding-3-small` (1536 dimensions)
 
-**Local** (fastembed): Uses local models via [fastembed](https://github.com/qdrant/fastembed). No API key required.
+**Local**: Uses local ONNX models via [hugot](https://github.com/knights-analytics/hugot). No API key required.
 - Default model: `BAAI/bge-small-en-v1.5` (384 dimensions)
 - Good for privacy-sensitive deployments or testing without API costs
+
+## Building from Source
+
+```bash
+# Build with CGO (requires LadybugDB native library)
+go build -o rag-server ./cmd/rag-server
+
+# Run
+./rag-server -space /path/to/space -db /data/ladybug.db
+```
+
+### Command Line Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-space` | (required) | Path to SilverBullet space directory |
+| `-db` | `<space>/.silverbullet-rag/ladybug.db` | Path to LadybugDB database |
+| `-grpc` | `:50051` | gRPC server address |
+| `-mcp` | `:8000` | MCP HTTP server address |
+| `-health-port` | `8080` | Health check HTTP port (0 to disable) |
+| `-log-level` | `info` | Log level (debug, info, warn, error) |
+| `-rebuild` | `false` | Rebuild index from scratch |
+| `-no-embeddings` | `false` | Disable embedding generation |
+| `-library-path` | `./library` | Path to bundled library files |
+| `-allow-library-management` | `false` | Enable library install/update MCP tools |
+
+### Docker
+
+```bash
+# Build the image
+docker build -t silverbullet-rag .
+
+# Run
+docker run --rm \
+  -v /path/to/space:/space:ro \
+  -v ladybug-db:/data \
+  -p 50051:50051 \
+  -p 8000:8000 \
+  -p 8080:8080 \
+  silverbullet-rag
+```
+
+### Health Endpoints
+
+The server provides Kubernetes-compatible health endpoints on port 8080:
+
+| Endpoint | Description |
+|----------|-------------|
+| `/health` | Combined health status of gRPC and MCP services |
+| `/health/grpc` | gRPC server health |
+| `/health/mcp` | MCP server health |
+| `/ready` | Readiness probe (services ready to accept traffic) |
+| `/live` | Liveness probe (process is running) |
 
 ## Architecture
 

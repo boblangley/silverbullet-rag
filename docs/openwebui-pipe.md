@@ -178,7 +178,7 @@ If you see `gRPC error: UNAVAILABLE`, check:
 
 ### No Search Results
 
-- Verify the index is built: `docker-compose exec silverbullet-rag python -m server.init_index`
+- Verify the index is built (check logs for "initial index complete")
 - Check that embeddings are enabled (`ENABLE_EMBEDDINGS=true`)
 - Try keyword search type first to rule out embedding issues
 

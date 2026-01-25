@@ -6,7 +6,7 @@ The Silverbullet RAG gRPC server provides fast, binary-protocol access to search
 
 - **Port**: 50051
 - **Protocol**: gRPC with Protocol Buffers
-- **Proto file**: `server/grpc/rag.proto`
+- **Proto file**: `proto/rag.proto`
 
 ## Available RPCs
 
