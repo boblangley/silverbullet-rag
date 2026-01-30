@@ -7,6 +7,45 @@ The Silverbullet RAG gRPC server provides fast, binary-protocol access to search
 - **Port**: 50051
 - **Protocol**: gRPC with Protocol Buffers
 - **Proto file**: `proto/rag.proto`
+- **Buf Schema Registry**: [`buf.build/boblangley/silverbullet-rag`](https://buf.build/boblangley/silverbullet-rag)
+
+## Generate Clients from BSR
+
+The easiest way to generate gRPC clients is using the [Buf Schema Registry](https://buf.build/boblangley/silverbullet-rag):
+
+```bash
+# Install buf CLI
+# See: https://buf.build/docs/installation
+
+# Generate clients for your language
+buf generate buf.build/boblangley/silverbullet-rag
+```
+
+Create a `buf.gen.yaml` in your project:
+
+```yaml
+version: v2
+plugins:
+  # Python
+  - remote: buf.build/protocolbuffers/python
+    out: gen/python
+  - remote: buf.build/grpc/python
+    out: gen/python
+
+  # TypeScript
+  - remote: buf.build/connectrpc/es
+    out: gen/ts
+
+  # Go
+  - remote: buf.build/protocolbuffers/go
+    out: gen/go
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: gen/go
+    opt: paths=source_relative
+```
+
+Then run `buf generate buf.build/boblangley/silverbullet-rag`.
 
 ## Available RPCs
 
@@ -20,6 +59,8 @@ The Silverbullet RAG gRPC server provides fast, binary-protocol access to search
 | `ProposeChange` | `ProposeChangeRequest` | `ProposeChangeResponse` | Propose a change (creates a proposal for user review) |
 | `ListProposals` | `ListProposalsRequest` | `ListProposalsResponse` | List proposals by status |
 | `WithdrawProposal` | `WithdrawProposalRequest` | `WithdrawProposalResponse` | Withdraw a pending proposal |
+| `GetFolderContext` | `GetFolderContextRequest` | `GetFolderContextResponse` | Get context for an Open WebUI folder |
+| `GetProjectContext` | `GetProjectContextRequest` | `GetProjectContextResponse` | Get project context by GitHub remote or folder path |
 
 ## Proto Definition
 
@@ -36,6 +77,8 @@ service RAGService {
   rpc ProposeChange(ProposeChangeRequest) returns (ProposeChangeResponse);
   rpc ListProposals(ListProposalsRequest) returns (ListProposalsResponse);
   rpc WithdrawProposal(WithdrawProposalRequest) returns (WithdrawProposalResponse);
+  rpc GetFolderContext(GetFolderContextRequest) returns (GetFolderContextResponse);
+  rpc GetProjectContext(GetProjectContextRequest) returns (GetProjectContextResponse);
 }
 
 message SemanticSearchRequest {

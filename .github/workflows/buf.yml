@@ -1,0 +1,59 @@
+name: Buf
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+    paths:
+      - "proto/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "proto/**"
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Buf
+        uses: bufbuild/buf-setup-action@v1
+
+      - name: Buf lint
+        working-directory: proto
+        run: buf lint
+
+  breaking:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Buf
+        uses: bufbuild/buf-setup-action@v1
+
+      - name: Buf breaking change detection
+        working-directory: proto
+        run: buf breaking --against "https://github.com/${{ github.repository }}.git#branch=main,subdir=proto"
+
+  publish:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    needs: [lint]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Buf
+        uses: bufbuild/buf-setup-action@v1
+
+      - name: Buf push to BSR
+        working-directory: proto
+        env:
+          BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
+        run: buf push --tag ${{ github.ref_name }}
