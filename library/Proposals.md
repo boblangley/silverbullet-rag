@@ -4,7 +4,7 @@ tags: meta/library
 displayName: Proposals
 description: Review and manage proposed changes to your Silverbullet space
 author: silverbullet-rag
-version: 0.12.0
+version: 0.12.1
 files:
 - Proposals/Proposals.plug.js
 ---

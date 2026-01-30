@@ -1,9 +1,13 @@
 version: v2
 modules:
   - path: .
+    name: buf.build/boblangley/silverbullet-rag
 lint:
   use:
     - STANDARD
+  except:
+    - PACKAGE_VERSION_SUFFIX
+    - PACKAGE_DIRECTORY_MATCH
 breaking:
   use:
     - FILE
