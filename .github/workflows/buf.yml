@@ -56,4 +56,4 @@ jobs:
         working-directory: proto
         env:
           BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
-        run: buf push --tag ${{ github.ref_name }}
+        run: buf push --create --create-visibility public --label ${{ github.ref_name }}
